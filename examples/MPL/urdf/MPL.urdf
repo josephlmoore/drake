@@ -1,0 +1,1505 @@
+<robot
+  name="MPL_Shell2">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0.00393619295985793 0.0455004970707574 -0.000114423209567375"
+        rpy="0 0 0" />
+      <mass
+        value="0.155708299809078" />
+      <inertia
+        ixx="0.000198286723644176"
+        ixy="5.15825480481307E-06"
+        ixz="1.87344010968919E-07"
+        iyy="0.000145239460391918"
+        iyz="2.40431862621867E-07"
+        izz="0.000188079268371058" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/base_link.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <link
+    name="shoulder">
+    <inertial>
+      <origin
+        xyz="0.00053626037123725 0.00200195706607822 0.0332799933130828"
+        rpy="0 0 0" />
+      <mass
+        value="0.0363799064562326" />
+      <inertia
+        ixx="3.73004982794341E-05"
+        ixy="5.68583128674669E-07"
+        ixz="-7.59540426519701E-07"
+        iyy="2.6055803459056E-05"
+        iyz="-9.15511861181247E-07"
+        izz="3.8618586384315E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/shoulder.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="shoulderz"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="1.5707963267949 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="shoulder" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="shoulderz_trans">
+    <actuator name="shoulderz_torque" />
+    <joint name="shoulderz" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="humerus">
+    <inertial>
+      <origin
+        xyz="-0.00522997872428727 -0.0834807430260893 0.0108424934218675"
+        rpy="0 0 0" />
+      <mass
+        value="0.0857897702132028" />
+      <inertia
+        ixx="0.000259544233373952"
+        ixy="-4.20379221363119E-06"
+        ixz="9.18423778177478E-07"
+        iyy="0.000134353123274701"
+        iyz="-1.37916957116714E-05"
+        izz="0.0002849825478504" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/humerus.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="shoulderx"
+    type="revolute">
+    <origin
+      xyz="0.00164280000000001 0 0.027295"
+      rpy="0 0 0" />
+    <parent
+      link="shoulder" />
+    <child
+      link="humerus" />
+    <axis
+      xyz="-1 0 0" />
+  </joint>
+
+
+ <transmission type="SimpleTransmission" name="shoulderx_trans">
+    <actuator name="shoulderx_torque" />
+    <joint name="shoulderx" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+
+  <link
+    name="lower_humerus">
+    <inertial>
+      <origin
+        xyz="-0.00116461256867187 -0.00731549753415162 -0.0740904947981883"
+        rpy="0 0 0" />
+      <mass
+        value="0.0351908595008693" />
+      <inertia
+        ixx="0.000106584594982158"
+        ixy="2.34411767892075E-06"
+        ixz="5.90981930034932E-06"
+        iyy="0.000106707923152588"
+        iyz="1.56519202722981E-05"
+        izz="3.29647759199842E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/lower_humerus.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="humerus"
+    type="revolute">
+    <origin
+      xyz="-0.0016397 -0.150067219999992 0.0138906542099971"
+      rpy="-1.5707963267949 -2.97009943141911E-17 -4.85743832441789E-17" />
+    <parent
+      link="humerus" />
+    <child
+      link="lower_humerus" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="humerus_trans">
+    <actuator name="humerus_torque" />
+    <joint name="humerus" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+
+  <link
+    name="forearm">
+    <inertial>
+      <origin
+        xyz="0.0215525954489544 -0.0733139430283116 0.000589426653904816"
+        rpy="0 0 0" />
+      <mass
+        value="0.0997004881323453" />
+      <inertia
+        ixx="0.000498861218238686"
+        ixy="3.76068927506325E-05"
+        ixz="-3.5608092987334E-07"
+        iyy="0.000102150048169159"
+        iyz="5.83137758717366E-06"
+        izz="0.000499799444466365" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/forearm.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+
+
+
+  <joint
+    name="elbow"
+    type="revolute">
+    <origin
+      xyz="-0.00999999999999948 -0.0153475999999826 -0.144409618700001"
+      rpy="1.5707963267949 2.4980018054066E-16 1.5707963267949" />
+    <parent
+      link="lower_humerus" />
+    <child
+      link="forearm" />
+    <axis
+      xyz="1 0 0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="elbow_torque">
+    <actuator name="elbow" />
+    <joint name="elbow" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="wristy">
+    <inertial>
+      <origin
+        xyz="-0.0217787533515095 -0.000286183263809584 -7.07475168545829E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.0272933414299216" />
+      <inertia
+        ixx="2.46772724290599E-05"
+        ixy="1.77307535049132E-07"
+        ixz="7.89922349608001E-09"
+        iyy="1.71121898499667E-05"
+        iyz="4.35170097875038E-09"
+        izz="1.7702950570702E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/wristy.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="wristy"
+    type="revolute">
+    <origin
+      xyz="0.0159663173620475 -0.185433999999999 0"
+      rpy="-1.5707963267949 -1.36002320516583E-15 1.57079632679502" />
+    <parent
+      link="forearm" />
+    <child
+      link="wristy" />
+    <axis
+      xyz="-1 0 0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="wristy_trans">
+    <actuator name="wristy_torque" />
+    <joint name="wristy" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="wristx">
+    <inertial>
+      <origin
+        xyz="-0.00252668105418901 -0.00975188648737202 -0.00139174414834004"
+        rpy="0 0 0" />
+      <mass
+        value="0.0106909767992069" />
+      <inertia
+        ixx="5.04229378071644E-06"
+        ixy="-4.2000584831686E-08"
+        ixz="-5.11929723120262E-09"
+        iyy="4.22942261613775E-06"
+        iyz="1.50151167686402E-07"
+        izz="3.2799533577572E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/wristx.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="wristx"
+    type="revolute">
+    <origin
+      xyz="-0.0476452 0.00203763491182761 -3.36826379749022E-05"
+      rpy="3.14159265358979 -2.85997139454283E-15 1.5707963267949" />
+    <parent
+      link="wristy" />
+    <child
+      link="wristx" />
+    <axis
+      xyz="-1 0 0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="wristx_trans">
+    <actuator name="wristx_torque" />
+    <joint name="wristx" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="wristz">
+    <inertial>
+      <origin
+        xyz="-0.000455967598428706 -0.00125951677917735 0.000579015605829236"
+        rpy="0 0 0" />
+      <mass
+        value="0.00602247084483471" />
+      <inertia
+        ixx="1.43255769043491E-06"
+        ixy="1.51084513948656E-08"
+        ixz="7.79120926693573E-10"
+        iyy="1.57976698495145E-06"
+        iyz="2.71504225165823E-09"
+        izz="1.26863177317152E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/wristz.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="wristz"
+    type="revolute">
+    <origin
+      xyz="-0.00209400000175488 -0.0299999999999968 -0.000187200001735867"
+      rpy="3.14159265358967 3.66488308739579E-15 -3.14159265358979" />
+    <parent
+      link="wristx" />
+    <child
+      link="wristz" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="wristz_trans">
+    <actuator name="wristz_torque" />
+    <joint name="wristz" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+
+  <link
+    name="palm">
+    <inertial>
+      <origin
+        xyz="-0.0124635761485956 0.0238765260006965 0.0211718276361491"
+        rpy="0 0 0" />
+      <mass
+        value="0.0932249189972487" />
+      <inertia
+        ixx="9.13635658564679E-05"
+        ixy="2.26923051263853E-06"
+        ixz="-2.9944410545557E-07"
+        iyy="5.22587462242499E-05"
+        iyz="-1.65090250755118E-06"
+        izz="7.38624729314462E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/palm.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="palm"
+    type="fixed">
+    <origin
+      xyz="0.010259 -0.022525 -0.033869"
+      rpy="1.3088 0.052303 0.076401" />
+    <parent
+      link="wristz" />
+    <child
+      link="palm" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="palm_trans">
+    <actuator name="palm_torque" />
+    <joint name="palm" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="index1">
+    <inertial>
+      <origin
+        xyz="0.00020614559516789 0.00548493955028884 -0.000142558806238502"
+        rpy="0 0 0" />
+      <mass
+        value="0.00295578735276272" />
+      <inertia
+        ixx="4.02188542971774E-07"
+        ixy="4.58692336785966E-09"
+        ixz="5.00514905149032E-10"
+        iyy="1.9404806387498E-07"
+        iyz="-4.23309499957816E-09"
+        izz="4.22374542417521E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/index1.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+
+  <joint
+    name="index1"
+    type="revolute">
+    <origin
+      xyz="-0.014417 -0.013617 0.040131"
+      rpy="1.3267 0.1312 -2.9409" />
+    <parent
+      link="palm" />
+    <child
+      link="index1" />
+    <axis
+      xyz="-1 0 0" />
+    <limit
+      effort="0"
+      velocity="0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="index1_trans">
+    <actuator name="index1_torque" />
+    <joint name="index1" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+
+  <link
+    name="index2">
+    <inertial>
+      <origin
+        xyz="0.000655655364277082 0.0213125459360581 0.000406397665143287"
+        rpy="0 0 0" />
+      <mass
+        value="0.00478226526501448" />
+      <inertia
+        ixx="7.95401055929008E-07"
+        ixy="1.18999904739261E-08"
+        ixz="1.780498789936E-10"
+        iyy="3.06544531935587E-07"
+        iyz="1.28837160695393E-09"
+        izz="8.18587860484427E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/index2.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+   
+  </link>
+  <joint
+    name="index2"
+    type="revolute">
+    <origin
+      xyz="0 0.018 6.26000000001087E-05"
+      rpy="1.56992474575901E-16 -5.55111512312578E-17 0.0218090253858622" />
+    <parent
+      link="index1" />
+    <child
+      link="index2" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="index2_trans">
+    <actuator name="index2_torque" />
+    <joint name="index2" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+
+  <link
+    name="index3">
+    <inertial>
+      <origin
+        xyz="0.000572643142834381 0.0126889633565876 -0.00084160174984519"
+        rpy="0 0 0" />
+      <mass
+        value="0.00344766597154545" />
+      <inertia
+        ixx="3.57436053918331E-07"
+        ixy="-2.03269066702914E-08"
+        ixz="7.99715421249574E-10"
+        iyy="1.07106131082521E-07"
+        iyz="6.41728361285024E-09"
+        izz="3.63785356055814E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/index3.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="index3"
+    type="revolute">
+    <origin
+      xyz="0.000500000000003571 0.0435 0.00108599999999995"
+      rpy="-1.719978326431E-15 -9.15933995315754E-16 -6.89293457381557E-14" />
+    <parent
+      link="index2" />
+    <child
+      link="index3" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="index3_trans">
+    <actuator name="index3_torque" />
+    <joint name="index3" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="index4">
+    <inertial>
+      <origin
+        xyz="-0.000903462263858363 0.0125318083645921 -4.31769336839988E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.00274415996393347" />
+      <inertia
+        ixx="1.19449725027233E-07"
+        ixy="2.7797031318046E-09"
+        ixz="-5.6762655930663E-12"
+        iyy="7.79733588773189E-08"
+        iyz="-4.0321242385536E-12"
+        izz="1.09201884617795E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/index4.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="index4"
+    type="revolute">
+    <origin
+      xyz="0 0.0244999999999997 -0.000634999999999922"
+      rpy="3.14159265358979 1.38777878078145E-16 -3.14159265358979" />
+    <parent
+      link="index3" />
+    <child
+      link="index4" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="index4_trans">
+    <actuator name="index4_torque" />
+    <joint name="index4" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="middle1">
+    <inertial>
+      <origin
+        xyz="0.000206163156215938 0.00548494288374568 -0.000142555900031375"
+        rpy="0 0 0" />
+      <mass
+        value="0.00295579444103146" />
+      <inertia
+        ixx="4.0218871124189E-07"
+        ixy="4.58719518672439E-09"
+        ixz="5.00538742724125E-10"
+        iyy="1.94047865583898E-07"
+        iyz="-4.23307801589345E-09"
+        izz="4.22374444781543E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/middle1.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="middle1"
+    type="revolute">
+    <origin
+      xyz="-0.0209384347663463 0.00492458734083651 0.0573494099495476"
+      rpy="1.30913244146118 0.00304707657383507 -3.08826100854655" />
+    <parent
+      link="palm" />
+    <child
+      link="middle1" />
+    <axis
+      xyz="-1 0 0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="middle1_trans">
+    <actuator name="middle1_torque" />
+    <joint name="middle1" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="middle2">
+    <inertial>
+      <origin
+        xyz="0.000655656337174182 0.0213125466194375 0.000406401138875141"
+        rpy="0 0 0" />
+      <mass
+        value="0.00478226670435687" />
+      <inertia
+        ixx="7.95401027312374E-07"
+        ixy="1.18999959631096E-08"
+        ixz="1.77978503020841E-10"
+        iyy="3.06544628087073E-07"
+        iyz="1.28837536063901E-09"
+        izz="8.18587990027117E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/middle2.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="middle2"
+    type="revolute">
+    <origin
+      xyz="0 0.0180000000000007 6.2600000000107E-05"
+      rpy="1.57011539981636E-16 -4.7891569957944E-17 0.0218090253858622" />
+    <parent
+      link="middle1" />
+    <child
+      link="middle2" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="middle2_trans">
+    <actuator name="middle2_torque" />
+    <joint name="middle2" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="middle3">
+    <inertial>
+      <origin
+        xyz="0.000572644351825441 0.0126889752403015 -0.000841535347221766"
+        rpy="0 0 0" />
+      <mass
+        value="0.00344767436500704" />
+      <inertia
+        ixx="3.57437093902647E-07"
+        ixy="-2.03267321495935E-08"
+        ixz="7.98658462558699E-10"
+        iyy="1.07106839998747E-07"
+        iyz="6.41746344551026E-09"
+        izz="3.63784751586843E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/middle3.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="middle3"
+    type="revolute">
+    <origin
+      xyz="0.000500000000003567 0.0435000000000001 0.00108599999999996"
+      rpy="-1.72031740475951E-15 -9.35032946541239E-16 -6.89309720414134E-14" />
+    <parent
+      link="middle2" />
+    <child
+      link="middle3" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="middle3_trans">
+    <actuator name="middle3_torque" />
+    <joint name="middle3" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="middle4">
+    <inertial>
+      <origin
+        xyz="-0.00090342086396468 0.0125318189255644 -4.31035597565597E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.00274418883435034" />
+      <inertia
+        ixx="1.1945085576179E-07"
+        ixy="2.77981899454222E-09"
+        ixz="-5.12554117691565E-12"
+        iyy="7.79746487284232E-08"
+        iyz="-3.8717877866095E-12"
+        izz="1.09202239907363E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/middle4.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="middle4"
+    type="revolute">
+    <origin
+      xyz="0 0.0245000000000003 -0.000634999999999948"
+      rpy="3.14159265358979 1.13713291763624E-16 -3.14159265358979" />
+    <parent
+      link="middle3" />
+    <child
+      link="middle4" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="middle4_trans">
+    <actuator name="middle4_torque" />
+    <joint name="middle4" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="ring1">
+    <inertial>
+      <origin
+        xyz="0.000206144674893209 0.0054849383898028 -0.000142564116473266"
+        rpy="0 0 0" />
+      <mass
+        value="0.00295578685443727" />
+      <inertia
+        ixx="4.02188516309226E-07"
+        ixy="4.58692769105901E-09"
+        ixz="5.00594233023491E-10"
+        iyy="1.94048069338058E-07"
+        iyz="-4.23310814676126E-09"
+        izz="4.22374536366058E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/ring1.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+ <joint
+    name="ring1"
+    type="revolute">
+    <origin
+      xyz="-0.0173619522633254 0.0298556268944343 0.0527828904025909"
+      rpy="1.29726814130052 0.0409899530617424 3.00365962493585" />
+    <parent
+      link="palm" />
+    <child
+      link="ring1" />
+    <axis
+      xyz="-1 0 0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="ring1_trans">
+    <actuator name="ring1_torque" />
+    <joint name="ring1" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="ring2">
+    <inertial>
+      <origin
+        xyz="0.000655643578583283 0.0213125486308142 0.000406423648704836"
+        rpy="0 0 0" />
+      <mass
+        value="0.00478228673206125" />
+      <inertia
+        ixx="7.95401808567871E-07"
+        ixy="1.18998213267075E-08"
+        ixz="1.77884042875398E-10"
+        iyy="3.06545076163242E-07"
+        iyz="1.28808220134735E-09"
+        izz="8.18589075286881E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/ring2.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="ring2"
+    type="revolute">
+    <origin
+      xyz="0 0.0180000000000001 6.2600000000114E-05"
+      rpy="1.56992474575901E-16 -2.77555756156289E-17 0.0218090253858622" />
+    <parent
+      link="ring1" />
+    <child
+      link="ring2" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="ring2_trans">
+    <actuator name="ring2_torque" />
+    <joint name="ring2" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="ring3">
+    <inertial>
+      <origin
+        xyz="0.00057268354366645 0.0126889632203925 -0.000841478203711936"
+        rpy="0 0 0" />
+      <mass
+        value="0.00344765712629595" />
+      <inertia
+        ixx="3.57436175925954E-07"
+        ixy="-2.03272107424788E-08"
+        ixz="7.97771294720232E-10"
+        iyy="1.07105906951034E-07"
+        iyz="6.4174544068651E-09"
+        izz="3.63784884200763E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/ring3.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="ring3"
+    type="revolute">
+    <origin
+      xyz="0.000500000000003574 0.0435000000000002 0.00108599999999996"
+      rpy="-1.719978326431E-15 -9.15933995315754E-16 -6.89269604933762E-14" />
+    <parent
+      link="ring2" />
+    <child
+      link="ring3" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="ring3_trans">
+    <actuator name="ring3_torque" />
+    <joint name="ring3" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="ring4">
+    <inertial>
+      <origin
+        xyz="-0.000903465274649531 0.0125318035823621 -4.31783671653516E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.00274415613178302" />
+      <inertia
+        ixx="1.19449527952084E-07"
+        ixy="2.77967908517532E-09"
+        ixz="-5.69695003796795E-12"
+        iyy="7.79732148182653E-08"
+        iyz="-3.98658391295813E-12"
+        izz="1.09201774132422E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/ring4.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="ring4"
+    type="revolute">
+    <origin
+      xyz="0 0.0245000000000004 -0.000634999999999927"
+      rpy="3.14159265358979 1.11022302462516E-16 -3.14159265358979" />
+    <parent
+      link="ring3" />
+    <child
+      link="ring4" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="ring4_trans">
+    <actuator name="ring4_torque" />
+    <joint name="ring4" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+
+  <link
+    name="pinky1">
+    <inertial>
+      <origin
+        xyz="0.000142563822196226 0.00538483821992819 0.000206145021280045"
+        rpy="0 0 0" />
+      <mass
+        value="0.00295578702193345" />
+      <inertia
+        ixx="4.22374540647275E-07"
+        ixy="4.23310894489419E-09"
+        ixz="-5.00599382623153E-10"
+        iyy="1.94048080035688E-07"
+        iyz="4.58692676339803E-09"
+        izz="4.02188525445446E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/pinky1.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="pinky1"
+    type="revolute">
+    <origin
+      xyz="-0.0118654996072796 0.0532752561873083 0.0477499795158182"
+      rpy="1.61336709193684 0.273292530911941 -1.6972329288972" />
+    <parent
+      link="palm" />
+    <child
+      link="pinky1" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="pinky1_trans">
+    <actuator name="pinky1_torque" />
+    <joint name="pinky1" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="pinky2">
+    <inertial>
+      <origin
+        xyz="0.000924752161548095 0.0160478239595567 0.000458605009191093"
+        rpy="0 0 0" />
+      <mass
+        value="0.00340990492680565" />
+      <inertia
+        ixx="3.83589528937808E-07"
+        ixy="9.60195836403551E-09"
+        ixz="-1.42076396177027E-09"
+        iyy="2.20448989585984E-07"
+        iyz="1.80181779993061E-09"
+        izz="4.03282329409878E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/pinky2.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>  
+  </link>
+
+  <joint
+    name="pinky2"
+    type="revolute">
+    <origin
+      xyz="-6.26000000000654E-05 0.0178999000000001 0"
+      rpy="-1.5707963267949 -1.42564316620607 1.5707963267949" />
+    <parent
+      link="pinky1" />
+    <child
+      link="pinky2" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="pinky2_trans">
+    <actuator name="pinky2_torque" />
+    <joint name="pinky2" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="pinky3">
+    <inertial>
+      <origin
+        xyz="0.000738513765579887 0.00914634674221348 -0.000270848377196917"
+        rpy="0 0 0" />
+      <mass
+        value="0.00250622195615789" />
+      <inertia
+        ixx="1.7455284577019E-07"
+        ixy="-1.17824738377136E-08"
+        ixz="3.24626221353354E-10"
+        iyy="7.59882144241849E-08"
+        iyz="3.87956675682691E-09"
+        izz="1.78940923958127E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/pinky3.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="pinky3"
+    type="revolute">
+    <origin
+      xyz="0.000499999999999889 0.0330000000000003 0.000577999999999995"
+      rpy="-1.64798730217797E-15 -8.60422844084496E-16 6.6266436782314E-16" />
+    <parent
+      link="pinky2" />
+    <child
+      link="pinky3" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="pinky3_trans">
+    <actuator name="pinky3_torque" />
+    <joint name="pinky3" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="pinky4">
+    <inertial>
+      <origin
+        xyz="0.000912797857438336 0.0125008504210756 3.76129340926012E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.00273081616008703" />
+      <inertia
+        ixx="1.18909209951679E-07"
+        ixy="-2.63828296392581E-09"
+        ixz="2.18714153368257E-11"
+        iyy="7.78907949616935E-08"
+        iyz="-3.96524648718146E-11"
+        izz="1.08560276947631E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/pinky4.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="pinky4"
+    type="revolute">
+    <origin
+      xyz="0 0.0174999999999998 -4.780000000007E-05"
+      rpy="0 2.4980018054066E-16 -5.19549681055054E-16" />
+    <parent
+      link="pinky3" />
+    <child
+      link="pinky4" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="pinky4_trans">
+    <actuator name="pinky4_torque" />
+    <joint name="pinky4" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="thumb1">
+    <inertial>
+      <origin
+        xyz="0.00863332730106438 -0.00231588938410798 -0.000364461389468301"
+        rpy="0 0 0" />
+      <mass
+        value="0.00336693679065055" />
+      <inertia
+        ixx="2.44090094627291E-07"
+        ixy="-1.56851483833158E-08"
+        ixz="-4.31870092363317E-08"
+        iyy="4.49381492245604E-07"
+        iyz="-5.78045100470672E-10"
+        izz="4.40715456367223E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/thumb1.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="thumb1"
+    type="revolute">
+    <origin
+      xyz="0 0 -0.00476960000000048"
+      rpy="-1.5707963267949 -1.56472057533108E-15 1.94289029309402E-16" />
+    <parent
+      link="palm" />
+    <child
+      link="thumb1" />
+    <axis
+      xyz="0 -1 0" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="thumb1_trans">
+    <actuator name="thumb1_torque" />
+    <joint name="thumb1" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="thumb2">
+    <inertial>
+      <origin
+        xyz="-0.000361461248041484 -0.0189988244918281 0.000782015326772745"
+        rpy="0 0 0" />
+      <mass
+        value="0.00597943752105777" />
+      <inertia
+        ixx="9.86775553054745E-07"
+        ixy="-7.97121704583963E-09"
+        ixz="2.45237431259238E-09"
+        iyy="5.34577193706388E-07"
+        iyz="1.8691715878871E-08"
+        izz="9.43696453381427E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/thumb2.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="thumb2"
+    type="revolute">
+    <origin
+      xyz="0.0209171904291636 -0.00299899999999997 -0.00284159999999972"
+      rpy="3.14159265358979 -9.71445146547012E-16 -1.5707963267949" />
+    <parent
+      link="thumb1" />
+    <child
+      link="thumb2" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="thumb2_trans">
+    <actuator name="thumb2_torque" />
+    <joint name="thumb2" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="thumb3">
+    <inertial>
+      <origin
+        xyz="-0.000360051801295391 -0.0188954598917676 0.000202889322317296"
+        rpy="0 0 0" />
+      <mass
+        value="0.00600527362411647" />
+      <inertia
+        ixx="9.96656337084621E-07"
+        ixy="-1.07461093618471E-08"
+        ixz="4.92554054789797E-10"
+        iyy="5.18698291352084E-07"
+        iyz="-3.49367360376412E-08"
+        izz="9.63528932704355E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/thumb3.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="thumb3"
+    type="revolute">
+    <origin
+      xyz="0 -0.0334999999999986 -0.000108399999999703"
+      rpy="1.31838984174237E-15 6.10622663543836E-16 -5.42690892224584E-14" />
+    <parent
+      link="thumb2" />
+    <child
+      link="thumb3" />
+    <axis
+      xyz="0 0 -1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="thumb3_trans">
+    <actuator name="thumb3_torque" />
+    <joint name="thumb3" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  <link
+    name="thumb4">
+    <inertial>
+      <origin
+        xyz="-0.0436607197221455 0.558076227586552 0.148029727000038"
+        rpy="0 0 0" />
+      <mass
+        value="0" />
+      <inertia
+        ixx="0"
+        ixy="0"
+        ixz="0"
+        iyy="0"
+        iyz="0"
+        izz="0" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/thumb4.obj" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint
+    name="thumb4"
+    type="revolute">
+    <origin
+      xyz="0 -0.0334999999999579 -0.000147600000002829"
+      rpy="3.14159265358979 -5.13478148889135E-16 -1.57079632679484" />
+    <parent
+      link="thumb3" />
+    <child
+      link="thumb4" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+
+ <transmission type="SimpleTransmission" name="thumb4_trans">
+    <actuator name="thumb4_torque" />
+    <joint name="thumb4" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+</robot>
