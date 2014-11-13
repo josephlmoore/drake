@@ -98,6 +98,17 @@ classdef RigidBodyGeometry
       pts = [];
     end
     
+    function obj = setColor(obj, color)
+      % Sets the color of the geometry for drawing
+      %
+      % @param color 3x1 color rgb array (defaults to [.7 .7 .7]
+      %
+      % @retval obj updated object
+      
+      obj.c = color;
+      
+    end
+    
   end
   
   methods (Static)
@@ -172,5 +183,6 @@ classdef RigidBodyGeometry
                  
     c = [.7 .7 .7];  % 3x1 color
     bullet_shape_id = 0;  % UNKNOWN
+    name % String identifier
   end
 end

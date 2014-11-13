@@ -45,7 +45,7 @@ classdef QPController < MIMODrakeSystem
     obj = setOutputFrame(obj,output_frame);
 
     obj.robot = r;
-    obj.numq = getNumDOF(r);
+    obj.numq = getNumPositions(r);
     obj.controller_data = controller_data;
     obj.n_body_accel_inputs = length(body_accel_input_frames);
     
@@ -108,6 +108,15 @@ classdef QPController < MIMODrakeSystem
       obj.Kp_ang = options.Kp_ang;
     else
       obj.Kp_ang = 1.0;
+    end       
+
+    % gain for support acceleration constraint: accel=-Kp_accel*vel
+    if isfield(options,'Kp_accel')
+      typecheck(options.Kp_accel,'double');
+      sizecheck(options.Kp_accel,1);
+      obj.Kp_accel = options.Kp_accel;
+    else
+      obj.Kp_accel = 0.0; % default desired acceleration=0
     end       
 
     % hard bound on slack variable values
@@ -343,7 +352,7 @@ classdef QPController < MIMODrakeSystem
           end
           [~,~,JB] = contactConstraintsBV(r,kinsol,false,struct('terrain_only',~obj.use_bullet,...
             'body_idx',[1,active_supports(j)],'collision_groups',active_contact_groups(j)));
-          Dbar = [Dbar, vertcat(JB{active_contact_pts{j}})']; % because contact constraints seems to ignore the collision_groups option
+          Dbar = [Dbar, vertcat(JB{:})'];
           c_pre = c_pre + length(active_contact_pts{j});
         end
 
@@ -412,7 +421,7 @@ classdef QPController < MIMODrakeSystem
       if nc > 0
         % relative acceleration constraint
         Aeq_{2} = Jp*Iqdd + Ieps;
-        beq_{2} = -Jpdot*qd - 0.0*Jp*qd; % TODO: parameterize
+        beq_{2} = -Jpdot*qd - obj.Kp_accel*Jp*qd; 
       end
 
       eq_count=3;
@@ -525,7 +534,7 @@ classdef QPController < MIMODrakeSystem
 
       if info_fqp<0
         % then call gurobi
-        disp('QPController: failed over to gurobi');
+        % disp('QPController: failed over to gurobi');
         model.Q = sparse(Hqp + REG*eye(nparams));
         model.A = [Aeq; Ain];
         model.rhs = [beq; bin];
@@ -627,8 +636,8 @@ classdef QPController < MIMODrakeSystem
         if info_mex >= 0 && info_fqp >= 0 && ~obj.use_bullet
           % matlab/mex are using different gurobi fallback options, so
           % solutions can be slightly different
-          valuecheck(y,y_mex,1e-3);
-          valuecheck(qdd,mex_qdd,1e-3);
+          %valuecheck(y,y_mex,1e-3);
+          %valuecheck(qdd,mex_qdd,1e-3);
         end
       end
     end   
@@ -667,6 +676,7 @@ classdef QPController < MIMODrakeSystem
     w_slack; % scalar slack var weight
     slack_limit; % maximum absolute magnitude of acceleration slack variable values
     Kp_ang; % proportunal gain for angular momentum feedback
+    Kp_accel; % gain for support acceleration constraint: accel=-Kp_accel*vel
     rfoot_idx;
     lfoot_idx;
     gurobi_options = struct();

@@ -1,4 +1,6 @@
 #include "controlUtil.h"
+#include "drakeUtil.h"
+#include "mex.h"
 
 template <typename DerivedA, typename DerivedB>
 void getRows(std::set<int> &rows, MatrixBase<DerivedA> const &M, MatrixBase<DerivedB> &Msub)
@@ -25,6 +27,30 @@ void getCols(std::set<int> &cols, MatrixBase<DerivedA> const &M, MatrixBase<Deri
     Msub.col(i++) = M.col(*iter);
 }
 
+template <typename DerivedPhi1, typename DerivedPhi2, typename DerivedD>
+void angleDiff(MatrixBase<DerivedPhi1> const &phi1, MatrixBase<DerivedPhi2> const &phi2, MatrixBase<DerivedD> &d) {
+  d = phi2 - phi1;
+  
+  for (int i = 0; i < phi1.rows(); i++) {
+    for (int j = 0; j < phi1.cols(); j++) {
+      if (d(i,j) < -M_PI) {
+        d(i,j) = fmod(d(i,j) + M_PI, 2*M_PI) + M_PI;
+      } else {
+        d(i,j) = fmod(d(i,j) + M_PI, 2*M_PI) - M_PI;
+      }
+    }
+  }
+}
+
+template <typename DerivedA>
+mxArray* eigenToMatlab(const DerivedA &m)
+{
+ mxArray* pm = mxCreateDoubleMatrix(m.rows(),m.cols(),mxREAL);
+ if (m.rows()*m.cols()>0)
+   memcpy(mxGetPr(pm),m.data(),sizeof(double)*m.rows()*m.cols());
+ return pm;
+}
+
 mxArray* myGetProperty(const mxArray* pobj, const char* propname)
 {
   mxArray* pm = mxGetProperty(pobj,0,propname);
@@ -47,20 +73,19 @@ bool inSupport(std::vector<SupportStateElement> supports, int body_idx) {
   return false;
 }
 
-void collisionDetect(void* map_ptr, Vector3d const & contact_pos, Vector3d &pos, Vector3d *normal, double terrain_height)
+void collisionDetect(void* map_ptr, Vector3d const &contact_pos, Vector3d &pos, Vector3d *normal, double terrain_height)
 {
   if (map_ptr) {
 #ifdef USE_MAPS    
-    Vector3f floatPos, floatNormal;
-    auto state = static_cast<mexmaps::MapHandle*>(map_ptr);
+    Vector3d oNormal;
+    double height;
+    auto state = static_cast<terrainmap::TerrainMap*>(map_ptr);
     if (state != NULL) {
-      auto view = state->getView();
-      if (view != NULL) {
-        if (view->getClosest(contact_pos.cast<float>(),floatPos,floatNormal)) {
-          pos = floatPos.cast<double>();
-          if (normal) *normal = floatNormal.cast<double>();
-          return;
-        }
+      state->getHeightAndNormal(contact_pos(0), contact_pos(1), height, oNormal);
+      pos << contact_pos.topRows(2), height;
+      if (normal) {
+        *normal = oNormal.cast<double>();
+        return;
       }
     }
 #endif      
@@ -93,7 +118,7 @@ void surfaceTangents(const Vector3d & normal, Matrix<double,3,m_surface_tangents
 
 int contactPhi(RigidBodyManipulator* r, SupportStateElement& supp, void *map_ptr, VectorXd &phi, double terrain_height)
 {
-  RigidBody* b = &(r->bodies[supp.body_idx]);
+  std::unique_ptr<RigidBody>& b = r->bodies[supp.body_idx];
   int nc = supp.contact_pt_inds.size();
   phi.resize(nc);
 
@@ -133,7 +158,7 @@ int contactConstraints(RigidBodyManipulator *r, int nc, std::vector<SupportState
   Matrix<double,3,m_surface_tangents> d;
   
   for (std::vector<SupportStateElement>::iterator iter = supp.begin(); iter!=supp.end(); iter++) {
-    RigidBody* b = &(r->bodies[iter->body_idx]);
+    std::unique_ptr<RigidBody>& b = r->bodies[iter->body_idx];
     if (nc>0) {
       for (std::set<int>::iterator pt_iter=iter->contact_pt_inds.begin(); pt_iter!=iter->contact_pt_inds.end(); pt_iter++) {
         if (*pt_iter<0 || *pt_iter>=b->contact_pts.cols()) mexErrMsgIdAndTxt("DRC:ControlUtil:BadInput","requesting contact pt %d but body only has %d pts",*pt_iter,b->contact_pts.cols());
@@ -165,7 +190,7 @@ int contactConstraints(RigidBodyManipulator *r, int nc, std::vector<SupportState
 }
 
 
-int contactConstraintsBV(RigidBodyManipulator *r, int nc, double mu, std::vector<SupportStateElement>& supp, void *map_ptr, MatrixXd &B, MatrixXd &JB, MatrixXd &Jp, MatrixXd &Jpdot,double terrain_height)
+int contactConstraintsBV(RigidBodyManipulator *r, int nc, double mu, std::vector<SupportStateElement>& supp, void *map_ptr, MatrixXd &B, MatrixXd &JB, MatrixXd &Jp, MatrixXd &Jpdot, MatrixXd &normals, double terrain_height)
 {
   int j, k=0, nq = r->num_dof;
 
@@ -173,6 +198,7 @@ int contactConstraintsBV(RigidBodyManipulator *r, int nc, double mu, std::vector
   JB.resize(nq,nc*2*m_surface_tangents);
   Jp.resize(3*nc,nq);
   Jpdot.resize(3*nc,nq);
+  normals.resize(3, nc);
   
   Vector3d contact_pos,pos,posB,normal; Vector4d tmp;
   MatrixXd J(3,nq);
@@ -180,7 +206,7 @@ int contactConstraintsBV(RigidBodyManipulator *r, int nc, double mu, std::vector
   double norm = sqrt(1+mu*mu); // because normals and ds are orthogonal, the norm has a simple form
   
   for (std::vector<SupportStateElement>::iterator iter = supp.begin(); iter!=supp.end(); iter++) {
-    RigidBody* b = &(r->bodies[iter->body_idx]);
+    std::unique_ptr<RigidBody>& b = r->bodies[iter->body_idx];
     if (nc>0) {
       for (std::set<int>::iterator pt_iter=iter->contact_pt_inds.begin(); pt_iter!=iter->contact_pt_inds.end(); pt_iter++) {
         if (*pt_iter<0 || *pt_iter>=b->contact_pts.cols()) mexErrMsgIdAndTxt("DRC:ControlUtil:BadInput","requesting contact pt %d but body only has %d pts",*pt_iter,b->contact_pts.cols());
@@ -203,6 +229,7 @@ int contactConstraintsBV(RigidBodyManipulator *r, int nc, double mu, std::vector
         Jp.block(3*k,0,3,nq) = J;
         r->forwardJacDot(iter->body_idx,tmp,0,J);
         Jpdot.block(3*k,0,3,nq) = J;
+        normals.col(k) = normal;
         
         k++;
       }
@@ -212,5 +239,66 @@ int contactConstraintsBV(RigidBodyManipulator *r, int nc, double mu, std::vector
   return k;
 }
 
-template void getRows(std::set<int> &, const MatrixBase< MatrixXd > &, MatrixBase< MatrixXd > &);
-template void getCols(std::set<int> &, const MatrixBase< MatrixXd > &, MatrixBase< MatrixXd > &);
+MatrixXd individualSupportCOPs(RigidBodyManipulator* r, const std::vector<SupportStateElement>& active_supports,
+    const MatrixXd& normals, const MatrixXd& B, const VectorXd& beta)
+{
+  const int n_basis_vectors_per_contact = B.cols() / normals.cols();
+  const int n = active_supports.size();
+
+  int normals_start = 0;
+  int beta_start = 0;
+
+  MatrixXd individual_cops(3, n);
+  individual_cops.fill(std::numeric_limits<double>::quiet_NaN());
+
+  for (int j = 0; j < active_supports.size(); j++) {
+    auto active_support = active_supports[j];
+    auto contact_pt_inds = active_support.contact_pt_inds;
+
+    int ncj = contact_pt_inds.size();
+    int active_support_length = n_basis_vectors_per_contact * ncj;
+    auto normalsj = normals.middleCols(normals_start, ncj);
+    Vector3d normal = normalsj.col(0);
+    bool normals_identical = (normalsj.colwise().operator-(normal)).squaredNorm() < 1e-15;
+
+    if (normals_identical) { // otherwise computing a COP doesn't make sense
+      const auto& Bj = B.middleCols(beta_start, active_support_length);
+      const auto& betaj = beta.segment(beta_start, active_support_length);
+
+      const auto& contact_positions = r->bodies[active_support.body_idx]->contact_pts;
+      Vector3d force = Vector3d::Zero();
+      Vector3d torque = Vector3d::Zero();
+
+      for (auto k = contact_pt_inds.begin(); k!= contact_pt_inds.end(); k++) { 
+        const auto& Bblock = Bj.middleCols(*k * n_basis_vectors_per_contact, n_basis_vectors_per_contact);
+        const auto& betablock = betaj.segment(*k * n_basis_vectors_per_contact, n_basis_vectors_per_contact);
+        Vector3d contact_position = contact_positions.col(*k);
+        Vector3d point_force = Bblock * betablock;
+        force += point_force;
+        auto torquejk = contact_position.cross(point_force);
+        torque += torquejk;
+      }
+
+      Vector3d point_on_contact_plane = contact_positions.col(0);
+      std::pair<Vector3d, double> cop_and_normal_torque = resolveCenterOfPressure(torque, force, normal, point_on_contact_plane);
+      Vector4d cop_body;
+      cop_body << cop_and_normal_torque.first, 1.0;
+      Vector3d cop_world;
+      r->forwardKin(active_support.body_idx, cop_body, 0, cop_world);
+      individual_cops.col(j) = cop_world;
+    }
+
+    normals_start += ncj;
+    beta_start += active_support_length;
+  }
+  return individual_cops;
+}
+
+template drakeControlUtilEXPORT void getRows(std::set<int> &, const MatrixBase< MatrixXd > &, MatrixBase< MatrixXd > &);
+template drakeControlUtilEXPORT void getCols(std::set<int> &, const MatrixBase< MatrixXd > &, MatrixBase< MatrixXd > &);
+template drakeControlUtilEXPORT void angleDiff(const MatrixBase<MatrixXd> &, const MatrixBase<MatrixXd> &, MatrixBase<MatrixXd> &);
+template drakeControlUtilEXPORT void angleDiff(const MatrixBase<Vector3d> &, const MatrixBase<Vector3d> &, MatrixBase<Vector3d> &);
+template drakeControlUtilEXPORT mxArray* eigenToMatlab(const MatrixXd &);
+template drakeControlUtilEXPORT mxArray* eigenToMatlab(const VectorXd &);
+template drakeControlUtilEXPORT mxArray* eigenToMatlab(const Vector6d &);
+template drakeControlUtilEXPORT mxArray* eigenToMatlab(const Vector3d &);

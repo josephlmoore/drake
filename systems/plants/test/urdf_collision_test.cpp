@@ -9,7 +9,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
 	if (argc<2) {
-		cerr << "Usage: urdf_kin_test urdf_filename" << endl;
+		cerr << "Usage: urdf_collision_test urdf_filename" << endl;
 		exit(-1);
 	}
   URDFRigidBodyManipulator* model = loadURDFfromFile(argv[1]);
@@ -50,8 +50,8 @@ int main(int argc, char* argv[])
     for (int i=0; i<3; ++i) {
       cout << xB(i,j) << " ";
     }
-    cout << model->bodies[bodyA_idx.at(j)].linkname << " "; 
-    cout << model->bodies[bodyB_idx.at(j)].linkname << endl;
+    cout << model->bodies[bodyA_idx.at(j)]->linkname << " ";
+    cout << model->bodies[bodyB_idx.at(j)]->linkname << endl;
   }
   
   delete model;

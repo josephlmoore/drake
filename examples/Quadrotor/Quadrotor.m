@@ -19,7 +19,7 @@ classdef Quadrotor < RigidBodyManipulator
           obj = addSensor(obj,lidar);
         case 'kinect'
           obj = addFrame(obj,RigidBodyFrame(findLinkInd(obj,'base_link'),[.35;0;0],zeros(3,1),'kinect_frame'));
-          kinect = RigidBodyDepthCamera('kinect',findFrameId(obj,'kinect_frame'),-.4,.4,12,-.5,.5,30,10);
+          kinect = RigidBodyDepthSensor('kinect',findFrameId(obj,'kinect_frame'),-.4,.4,12,-.5,.5,30,10);
           kinect = enableLCMGL(kinect);
           obj = addSensor(obj,kinect);
       end
@@ -27,6 +27,10 @@ classdef Quadrotor < RigidBodyManipulator
       obj = compile(obj);
     end
    
+    function I = getInertia(obj)
+      I = obj.body(2).inertia;
+    end
+    
     function u0 = nominalThrust(obj)
       % each propellor commands -mg/4
       u0 = Point(getInputFrame(obj),getMass(obj)*norm(getGravity(obj))*ones(4,1)/4);
@@ -39,10 +43,9 @@ classdef Quadrotor < RigidBodyManipulator
         xy = randn(2,1);
         while(norm(xy)<1), xy = randn(2,1); end
         height = .5+rand;
-        shape = RigidBodyBox([.2+.8*rand(1,2) height],[xy;height/2],[0;0;randn]);
-        shape.c = rand(3,1);
-        obj = addShapeToBody(obj,'world',shape);
-        obj = addContactShapeToBody(obj,'world',shape);
+        geometry = RigidBodyBox([.2+.8*rand(1,2) height],[xy;height/2],[0;0;randn]);
+        geometry.c = rand(3,1);
+        obj = addGeometryToBody(obj,'world',geometry);
       end
       
       obj = compile(obj);
@@ -72,13 +75,11 @@ classdef Quadrotor < RigidBodyManipulator
       treeTrunk = RigidBodyBox([.2+.8*width_param height],...
           [xy;height/2],[0;0;yaw]);
       treeTrunk.c = [83,53,10]/255;  % brown
-      obj = addShapeToBody(obj,'world',treeTrunk);
-      obj = addContactShapeToBody(obj,'world',treeTrunk);
+      obj = addGeometryToBody(obj,'world',treeTrunk);
       treeLeaves = RigidBodyBox(1.5*[.2+.8*width_param height/4],...
           [xy;height + height/8],[0;0;yaw]);
       treeLeaves.c = [0,0.7,0];  % green
-      obj = addShapeToBody(obj,'world',treeLeaves);
-      obj = addContactShapeToBody(obj,'world',treeLeaves);
+      obj = addGeometryToBody(obj,'world',treeLeaves);
       obj = compile(obj);
     end    
     
@@ -123,11 +124,13 @@ classdef Quadrotor < RigidBodyManipulator
       
       sys = cascade(ConstantTrajectory(u0),sys);
 
-      sys = cascade(sys,v);
-      simulate(sys,[0 2],double(x0)+.1*randn(12,1));
+%      sys = cascade(sys,v);
+%      simulate(sys,[0 2],double(x0)+.1*randn(12,1));
       
-%      [ytraj,xtraj] = simulate(sys,[0 2],double(x0)+.1*randn(12,1));
-%      v.playback(xtraj);
+      options.capture_lcm_channels = 'LCMGL';
+      [ytraj,xtraj,lcmlog] = simulate(sys,[0 2],double(x0)+.1*randn(12,1),options);
+      lcmlog
+      v.playback(xtraj,struct('lcmlog',lcmlog));
 %      figure(1); clf; fnplt(ytraj);
     end
   end

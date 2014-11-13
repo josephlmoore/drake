@@ -23,7 +23,7 @@ classdef MultipleTimeKinematicConstraint < RigidBodyConstraint
       valid_t_idx = obj.isTimeValid(t);
       valid_t = t(valid_t_idx);
       valid_kinsol_cell = kinsol_cell(valid_t_idx);
-      nq = obj.robot.getNumDOF();
+      nq = obj.robot.getNumPositions();
       if(length(valid_t)>=2)
         num_valid_t = size(valid_t,2);
         [c,dc_valid] = evalValidTime(obj,valid_kinsol_cell);
@@ -40,43 +40,62 @@ classdef MultipleTimeKinematicConstraint < RigidBodyConstraint
     
     function obj = updateRobot(obj,robot)
       obj.robot = robot;
-      obj.mex_ptr = updatePtrRigidBodyConstraintmex(obj.mex_ptr,'robot',robot.getMexModelPtr);
+      if(robot.getMexModelPtr~=0 && exist('updatePtrRigidBodyConstraintmex','file'))
+        obj.mex_ptr = updatePtrRigidBodyConstraintmex(obj.mex_ptr,'robot',robot.getMexModelPtr);
+      end
     end
     
-    function cnstr = generateConstraint(obj,t)
+    function cnstr = generateConstraint(obj,t,N)
       % generate a FunctionHandleConstraint for postures at all time t
-      t = t(:)';
-      valid_t_idx = obj.isTimeValid(t);
-      t_idx = (1:length(t));
-      valid_t_idx = t_idx(valid_t_idx);
-      num_valid_t = length(valid_t_idx);
-      if(num_valid_t >= 2)
-        [lb,ub] = obj.bounds(t);
-        nq = obj.robot.getNumDOF;
-        cnstr = {FunctionHandleConstraint(lb,ub,length(t)*nq,@(varargin) obj.eval(t,varargin(numel(t)+(1:numel(t)))))};
-        num_cnstr = obj.getNumConstraint(t);
-        joint_idx = obj.kinematicPathJoints();
-        iCfun = reshape(bsxfun(@times,(1:num_cnstr)',ones(1,length(joint_idx)*num_valid_t)),[],1);
-        jCvar = reshape(bsxfun(@times,ones(num_cnstr,1),reshape(bsxfun(@plus,nq*(valid_t_idx-1),joint_idx'),1,[])),[],1);
-        cnstr{1} = cnstr{1}.setSparseStructure(iCfun,jCvar);
-        name_str = obj.name(t);
-        cnstr{1} = cnstr{1}.setName(name_str);
+      if isempty(t)
+        if(N >= 2)
+          [lb,ub] = obj.bounds([],N);
+          nq = obj.robot.getNumPositions;
+          cnstr = {FunctionHandleConstraint(lb,ub,N*nq,@(varargin) obj.evalValidTime(varargin(N+(1:N))))};
+          %num_cnstr = obj.getNumConstraint(N);
+          %joint_idx = obj.kinematicPathJoints();
+          %iCfun = reshape(bsxfun(@times,(1:num_cnstr)',ones(1,length(joint_idx)*N)),[],1);
+          %jCvar = reshape(bsxfun(@times,ones(num_cnstr,1),reshape(bsxfun(@plus,nq*((1:N)-1),joint_idx'),1,[])),[],1);
+          %cnstr{1} = cnstr{1}.setSparseStructure(iCfun,jCvar);
+          %name_str = obj.name(t);
+          %cnstr{1} = cnstr{1}.setName(name_str);
+        else
+          cnstr = {};
+        end
       else
-        cnstr = {};
+        t = t(:)';
+        valid_t_idx = obj.isTimeValid(t);
+        t_idx = (1:length(t));
+        valid_t_idx = t_idx(valid_t_idx);
+        num_valid_t = length(valid_t_idx);
+        if(num_valid_t >= 2)
+          [lb,ub] = obj.bounds(t);
+          nq = obj.robot.getNumPositions;
+          cnstr = {FunctionHandleConstraint(lb,ub,length(t)*nq,@(varargin) obj.eval(t,varargin(numel(t)+(1:numel(t)))))};
+          num_cnstr = obj.getNumConstraint(t);
+          joint_idx = obj.kinematicPathJoints();
+          iCfun = reshape(bsxfun(@times,(1:num_cnstr)',ones(1,length(joint_idx)*num_valid_t)),[],1);
+          jCvar = reshape(bsxfun(@times,ones(num_cnstr,1),reshape(bsxfun(@plus,nq*(valid_t_idx-1),joint_idx'),1,[])),[],1);
+          cnstr{1} = cnstr{1}.setSparseStructure(iCfun,jCvar);
+          name_str = obj.name(t);
+          cnstr{1} = cnstr{1}.setName(name_str);
+        else
+          cnstr = {};
+        end
       end
     end
     
     function joint_idx = kinematicPathJoints(obj)
       % return the indices of the joints used to evaluate the constraint. The default
-      % value is (1:obj.robot.getNumDOF);
-      joint_idx = (1:obj.robot.getNumDOF);
+      % value is (1:obj.robot.getNumPositions);
+      joint_idx = (1:obj.robot.getNumPositions);
     end
   end
   
   methods(Abstract)
-    % t is an array instead of a scalar
-    num = getNumConstraint(obj,t);
-    [lb,ub] = bounds(obj,t)
+    % N is the number of knot points considered by this constraint
+    num = getNumConstraint(obj,N);
+    [lb,ub] = bounds(obj,t,N)
     name_str = name(obj,t)
   end
   

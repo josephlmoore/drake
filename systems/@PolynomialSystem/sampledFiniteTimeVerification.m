@@ -27,6 +27,8 @@ function V = sampledFiniteTimeVerification(sys,ts,G,varargin)
 % @option plot_rho set to true for visual progress/debugging output
 % @option degL1 polynomial degree of the first lagrange multiplier
 % @option degL2 polynomial degree of the second lagrange multiplier
+% @option lyap_parameterization specifies whether you search over the
+% rescaling of the Lyapunov function (rho) or the entire Lyapunov Function (rhoS).
 %
 % @retval V a time-varying PolynomialLyapunovFunction who's one-level set
 % defines the verified invariant region.
@@ -51,8 +53,7 @@ if (~isfield(options,'max_iterations')) options.max_iterations=10; end
 if (~isfield(options,'converged_tol')) options.converged_tol=.01; end
 if (~isfield(options,'stability')) options.stability=false; end  % true implies that we want exponential stability
 if (~isfield(options,'plot_rho')) options.plot_rho = true; end
-if (~isfield(options,'lyap_parameterization')) options.lyap_parameterization = 'rho'; end
-if (~isfield(options,'polysys_saved')) options.polysys_saved = 0; end
+if (~isfield(options,'lyap_parameterization')) options.lyap_parameterization = 'rho'; end %choose to search over rho or rho & S.
 if (isa(varargin{1},'Trajectory'))
   x0 = varargin{1}.inFrame(sys.getStateFrame);
   Q = eye(num_xc);
@@ -80,25 +81,15 @@ N = length(ts);
 Vmin = zeros(N-1,1);
 
 sys = sys.inStateFrame(V0.getFrame); % convert system to Lyapunov function coordinates
-x=V0.getFrame.poly;
-
-if(options.polysys_saved==1)
-    polysys=load('polysys.mat');
-    V=polysys.V;
-    Vdot=polysys.Vdot;
-    f=polysys.f;
-    Vmin=polysys.Vmin;
-    dVdt=polysys.dVdt;
-else
-    
+x=V0.getFrame.getPoly;
+ 
 % evaluate dynamics and Vtraj at every ts once (for efficiency/clarity)
 for i=1:N
-    tic
   V{i}=V0.getPoly(ts(i));
 
   f{i} = sys.getPolyDynamics(ts(i));
   if (sys.getNumInputs>0)   % zero all inputs
-    f{i} = subs(f{i},sys.getInputFrame.poly,zeros(sys.getNumInputs,1));
+    f{i} = subs(f{i},sys.getInputFrame.getPoly,zeros(sys.getNumInputs,1));
   end
   
   dVdt{i}=V0.getPolyTimeDeriv(ts(i));
@@ -116,10 +107,6 @@ for i=1:N
   else
   end
   Vmin(i) = minimumV(x,V{i});
-  toc
-end
-
-save('polysys.mat','V','Vdot','Vmin','f','dVdt');
 
 end
 
@@ -139,7 +126,6 @@ for i=1:N-1
   m(i)=sampleCheck(x,V{i},Vdot{i},rho(i),rhodot(i));
 end
 
-m
 
 if (max(m)>0)
   figure(4);clf;fnplt(foh(ts,rho')); 
@@ -161,7 +147,6 @@ for iter=1:options.max_iterations
       [rho,rhointegral]=optimizeRho(x,V,Vdot,L,dts,Vmin,rhof,options);       
       
       rhodot = diff(rho)./dts;
-      rhointegral
       % plot current rho
       if (options.plot_rho)
         rhopp=foh(ts,rho');
@@ -178,7 +163,6 @@ for iter=1:options.max_iterations
         
         [V, Vdot, Phi,f, rho, rhointegral]=optimize_V2(V_0,Vdot_0,dVdt,f,L,x,rho,rhodot,ts,dts,options);
         rhodot = diff(rho)./dts;
-        rhointegral
         % plot current rho
         if (options.plot_rho)
         rhopp=foh(ts,rho');
@@ -536,7 +520,7 @@ function L=findMultipliers(x,V,Vdot,rho,rhodot,options)
       L{i} = prog(L1);
     end
   end
-  slack
+  %slack
  
   for i=fliplr(1:N)
     if (slack{i}>1e-4 || info{i}.pinf~=0 || info{i}.dinf~=0)

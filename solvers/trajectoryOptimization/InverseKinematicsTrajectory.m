@@ -1,4 +1,4 @@
-classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
+classdef InverseKinematicsTrajectory < NonlinearProgram
 % solve IK
 %   min_q sum_i
 %   qdd(:,i)'*Qa*qdd(:,i)+qd(:,i)'*Qv*qd(:,i)+(q(:,i)-q_nom(:,i))'*Q*(q(:,i)-q_nom(:,i))]+additional_cost1+additional_cost2+...
@@ -28,6 +28,8 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
 % @param qd0_idx  -- a nq x 1 matrix. qdot0 = x(qd0_idx);
 % @param qdf_idx  -- a nq x 1 matrix. qdotf = x(qdf_idx);
 % @param qsc_weight_idx  -- a cell of vectors. x(qsc_weight_idx{i}) are the weights of the QuasiStaticConstraint at time t(i)
+% @param rbm_joint_bnd_cnstr_id  The ID of the BoundingBoxConstraint that enforces the
+% posture to be within the joint limits of the RigidBodyManipulator
   properties(SetAccess = protected)
     t_knot
     Q
@@ -36,24 +38,29 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
     Qa
     rgc
     fix_initial_state
-    q_idx   
-    qd0_idx  
-    qdf_idx  
+    q_idx
+    qd0_idx
+    qdf_idx
     qsc_weight_idx
     robot
 
     % nT-element vector of indices into the shared_data, where
     % shared_data{kinsol_dataind(i)} is the kinsol for knot point i
-    kinsol_dataind 
+    kinsol_dataind
+    rbm_joint_bnd_cnstr_id
   end
-  
+
   properties(Access = protected)
     q_nom   % a nq x nT matrix. q_nom = q_nom_traj.eval(t)
-    
+
     cpe   % A CubicPostureError object.
     nT    % Number of knot points
     nq    % Number of generalized positions
     t_kinsol % A 1 x nT boolean array. t_kinsol(i) is true if doKinematics should be called at time t_knot(i)
+  end
+
+  properties(Access = private)
+    bbcon_initial_state_id % The ID of the BoundingBoxConstraint on the initial state
   end
   
   methods
@@ -72,7 +79,7 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
       t = unique(t(:)');
       nT = numel(t);
       nq = robot.getNumPositions();
-      obj = obj@NonlinearProgramWConstraintObjects(nq*nT);
+      obj = obj@NonlinearProgram(nq*nT);
       obj.robot = robot;
       obj.t_knot = t;
       obj.nT = nT;
@@ -104,7 +111,7 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
       obj.qsc_weight_idx = cell(1,obj.nT);
       num_rbcnstr = nargin-5;
       [q_lb,q_ub] = obj.robot.getJointLimits();
-      obj = obj.addBoundingBoxConstraint(BoundingBoxConstraint(reshape(bsxfun(@times,q_lb,ones(1,obj.nT)),[],1),...
+      [obj,obj.rbm_joint_bnd_cnstr_id] = obj.addBoundingBoxConstraint(BoundingBoxConstraint(reshape(bsxfun(@times,q_lb,ones(1,obj.nT)),[],1),...
         reshape(bsxfun(@times,q_ub,ones(1,obj.nT)),[],1)),obj.q_idx(:));
       if(obj.fix_initial_state)
         t_start = 2;
@@ -168,7 +175,7 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
           t_idx = (t_start:obj.nT);
           valid_t_idx = t_idx(valid_t_flag);
           cnstr = varargin{i}.generateConstraint(obj.t_knot(valid_t_idx));
-          obj = obj.addKinematicConstraint(cnstr{1},valid_t_idx);
+          obj = obj.addKinematicConstraint(cnstr{1},{[valid_t_idx]});
         elseif(isa(varargin{i},'MultipleTimeLinearPostureConstraint'))
           cnstr = varargin{i}.generateConstraint(obj.t_knot(t_start:end));
           obj = obj.addLinearConstraint(cnstr{1},reshape(obj.q_idx(:,t_start:end),[],1));
@@ -188,7 +195,7 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
     function data = kinematicsData(obj,q)
       data = doKinematics(obj.robot,q,false,false);
     end
-    
+
     function obj = setCubicPostureError(obj,Q,Qv,Qa)
       % set the cost sum_i qdd(:,i)'*Qa*qdd(:,i)+qd(:,i)'*Qv*qd(:,i)+(q(:,i)-q_nom(:,i))'*Q*(q(:,i)-q_nom(:,i))]
       obj.Q = (Q+Q')/2;
@@ -203,7 +210,7 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
         obj = obj.replaceCost(obj.cpe,1,xind);
       end
     end
-    
+
     function obj = setFixInitialState(obj,flag,x0)
       % set obj.fix_initial_state = flag. If flag = true, then fix the initial state to x0
       % @param x0   A 2*obj.nq x 1 double vector. x0 = [q0;qdot0]. The initial state
@@ -212,21 +219,21 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
       if(isempty(obj.bbcon))
         obj.fix_initial_state = flag;
         if(obj.fix_initial_state)
-          obj = obj.addBoundingBoxConstraint(BoundingBoxConstraint(x0,x0),[obj.q_idx(:,1);obj.qd0_idx]);
+          [obj,obj.bbcon_initial_state_id] = obj.addBoundingBoxConstraint(BoundingBoxConstraint(x0,x0),[obj.q_idx(:,1);obj.qd0_idx]);
         else
-          obj = obj.addBoundingBoxConstraint(BoundingBoxConstraint(-inf(2*obj.nq,1),inf(2*obj.nq,1)),[obj.q_idx(:,1);obj.qd0_idx]);
+          [obj,obj.bbcon_initial_state_id] = obj.addBoundingBoxConstraint(BoundingBoxConstraint(-inf(2*obj.nq,1),inf(2*obj.nq,1)),[obj.q_idx(:,1);obj.qd0_idx]);
         end
       elseif(obj.fix_initial_state ~= flag)
         obj.fix_initial_state = flag;
         if(obj.fix_initial_state)
-          obj = obj.replaceBoundingBoxConstraint(BoundingBoxConstraint(x0,x0),1,[obj.q_idx(:,1);obj.qd0_idx]);
+          [obj,obj.bbcon_initial_state_id] = obj.updateBoundingBoxConstraint(obj.bbcon_initial_state_id,BoundingBoxConstraint(x0,x0),[obj.q_idx(:,1);obj.qd0_idx]);
         else
-          obj = obj.replaceBoundingBoxConstraint(BoundingBoxConstraint(-inf(2*obj.nq,1),inf(2*obj.nq,1)),1,[obj.q_idx(:,1);obj.qd0_idx]);
+          [obj,obj.bbcon_initial_state_id] = obj.updateBoundingBoxConstraint(obj.bbcon_initial_state_id,BoundingBoxConstraint(-inf(2*obj.nq,1),inf(2*obj.nq,1)),[obj.q_idx(:,1);obj.qd0_idx]);
         end
       end
     end
-    
-    
+
+
     function [xtraj,F,info,infeasible_constraint] = solve(obj,qtraj_seed)
       % @param qtraj_seed.   A Trajectory object. The initial guess of posture trajectory.
       % @retval xtraj.       A Cubic spline trajectory. The solution of state trajectory,
@@ -245,16 +252,15 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
           x0(obj.qsc_weight_idx{i}) = 1/length(obj.qsc_weight_idx{i});
         end
       end
-      [x,F,info] = solve@NonlinearProgramWConstraintObjects(obj,x0);
+      [x,F,info,infeasible_constraint] = solve@NonlinearProgram(obj,x0);
       [q,qdot,qddot] = obj.cpe.cubicSpline(x([obj.q_idx(:);obj.qd0_idx;obj.qdf_idx]));
       q = max([q(:) reshape(obj.x_lb(obj.q_idx),[],1)],[],2);
       q = min([q(:) reshape(obj.x_ub(obj.q_idx),[],1)],[],2);
       q = reshape(q,obj.robot.getNumPositions,[]);
       xtraj = PPTrajectory(pchipDeriv(obj.t_knot,[q;qdot],[qdot;qddot]));
       xtraj = xtraj.setOutputFrame(obj.robot.getStateFrame);
-      [info,infeasible_constraint] = infeasibleConstraintName(obj,x,info);
     end
-    
+
     function obj = addKinematicConstraint(obj,constraint,time_index)
       % Add a constraint that is a function of the generalized positions
       % at the specified time or times.
@@ -266,51 +272,15 @@ classdef InverseKinematicsTrajectory < NonlinearProgramWConstraintObjects
       %   points 1 and 2 together (taking the combined state as an argument)
       %   and 3 and 4 together.
       if ~iscell(time_index)
-        time_index = {time_index};
+        time_index = num2cell(reshape(time_index,1,[]));
       end
       for j=1:length(time_index),
-        kinsol_inds = obj.kinsol_dataind(time_index{j}); 
+        kinsol_inds = obj.kinsol_dataind(time_index{j});
         cnstr_inds = mat2cell(obj.q_idx(:,time_index{j}),size(obj.q_idx,1),ones(1,length(time_index{j})));
-        
+
         obj = obj.addConstraint(constraint,cnstr_inds,kinsol_inds);
       end
     end
 
-    function [info,infeasible_constraint] = infeasibleConstraintName(obj,x,info)
-      % return the name of the infeasible nonlinear constraint
-      % @retval info     -- change the return info from nonlinear solver based on how much
-      % the solution violate the constraint
-      % @retval infeasible_constraint  -- A cell of strings.
-      infeasible_constraint = {};
-      if(strcmp(obj.solver,'snopt'))
-        if(info>10)
-          fval = obj.objectiveAndNonlinearConstraints(x);
-          A = [obj.Ain;obj.Aeq];
-          if(~isempty(A))
-            fval = [fval;A*x];
-          end
-          [lb,ub] = obj.bounds();
-          ub_err = fval(2:end)-ub(2:end);
-          max_ub_err = max(ub_err);
-          max_ub_err = max_ub_err*(max_ub_err>0);
-          lb_err = lb(2:end)-fval(2:end);
-          max_lb_err = max(lb_err);
-          max_lb_err = max_lb_err*(max_lb_err>0);
-          cnstr_name = [obj.cin_name;obj.ceq_name;obj.Ain_name;obj.Aeq_name];
-          if(max_ub_err+max_lb_err>1e-4)
-            infeasible_constraint_idx = (ub_err>5e-5) | (lb_err>5e-5);
-            infeasible_constraint = cnstr_name(infeasible_constraint_idx);
-          elseif(info == 13)
-            info = 4;
-          elseif(info == 31)
-            info = 5;
-          elseif(info == 32)
-            info = 6;
-          end
-        end
-      else
-        error('not implemented yet');
-      end
-    end
   end
 end

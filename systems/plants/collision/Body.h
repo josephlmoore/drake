@@ -10,7 +10,9 @@ namespace DrakeCollision
 
       void addElement(const int body_idx, const int parent_idx, 
                       const Eigen::Matrix4d& T_elem_to_link, Shape shape, 
-                      const std::vector<double>& params)
+                      const std::vector<double>& params,
+                      const std::string& group_name,
+                      bool use_margins = true)
       {
         //DEBUG
         //std::cout << "Body::addElement: START" << std::endl;
@@ -19,7 +21,7 @@ namespace DrakeCollision
           //DEBUG
           //std::cout << "Body::addElement: Add new element" << std::endl;
           //END_DEBUG
-            elements.emplace_back(T_elem_to_link, shape, params);
+            elements.emplace_back(T_elem_to_link, shape, params, group_name, use_margins);
         } else {
           //DEBUG
           //std::cout << "Body::addElement: Indices don't match" << std::endl;
@@ -30,7 +32,7 @@ namespace DrakeCollision
             //END_DEBUG
             this->body_idx = body_idx;
             this->parent_idx = parent_idx;
-            elements.emplace_back(T_elem_to_link, shape, params);
+            elements.emplace_back(T_elem_to_link, shape, params, group_name, use_margins);
             //DEBUG
             //std::cout << "body_idx = " << body_idx << std::endl;
             //std::cout << "this->body_idx = " << this->body_idx << std::endl;
@@ -99,14 +101,15 @@ namespace DrakeCollision
 
       bool adjacentTo(const Body& other) const
       {
-        return (body_idx == other.getParentIdx()) || 
-               (parent_idx == other.getBodyIdx());
+        return  (body_idx != -1) && (other.getBodyIdx() != -1) &&
+                ( (body_idx == other.getParentIdx()) || 
+                  (parent_idx == other.getBodyIdx()) ) ;
       };
 
       bool collidesWith(const Body& other) const
       {
         return  ( !adjacentTo(other) || (body_idx == 0) || (other.getBodyIdx() == 0) ) &&
-                (body_idx != other.getBodyIdx()) && 
+                ( (body_idx == -1) || (other.getBodyIdx() == -1) || body_idx != other.getBodyIdx()) && 
                 (group & other.mask).any() && 
                 (other.group & mask).any();
       };

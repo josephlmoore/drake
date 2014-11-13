@@ -11,12 +11,12 @@ r = TimeSteppingRigidBodyManipulator([],dt,options);
 options.floating = true;
 %s = 'urdf/simple_atlas_minimal_contact.urdf';
 s = '../urdf/atlas_minimal_contact.urdf';
-w = warning('off','Drake:RigidBodyManipulator:UnsupportedJointLimits');
 r = addRobotFromURDF(r,s,[0;0;0],[0;0;0],options);
 options.namesuffix = 'rotated';
 
 r = addRobotFromURDF(r,s,[1;0;0],[0;0;0],options);
-warning(w);
+r = r.removeCollisionGroupsExcept({'toe','heel'});
+r = compile(r);
 
 %options.viewer = 'BotVisualizer';
 v = r.constructVisualizer(options);

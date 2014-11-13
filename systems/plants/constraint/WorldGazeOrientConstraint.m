@@ -32,17 +32,8 @@ classdef WorldGazeOrientConstraint < GazeOrientConstraint
         tspan = [-inf inf];
       end
       obj = obj@GazeOrientConstraint(robot,axis,quat_des,conethreshold,threshold,tspan);
-      if(isnumeric(body))
-        sizecheck(body,[1,1]);
-        obj.body = body;
-      elseif(typecheck(body,'char'))
-        obj.body = robot.findLinkInd(body);
-      elseif(typecheck(body,'RigidBody'))
-        obj.body = robot.findLinkInd(body.linkname);
-      else
-        error('Drake:WorldGazeOrientConstraint:Body must be either the link name or the link index');
-      end
-      obj.body_name = obj.robot.getBody(obj.body).linkname;
+      obj.body = obj.robot.parseBodyOrFrameID(body);
+      obj.body_name = obj.robot.getBodyOrFrameName(obj.body);
       obj.type = RigidBodyConstraint.WorldGazeOrientConstraintType;
       if robot.getMexModelPtr~=0 && exist('constructPtrRigidBodyConstraintmex','file')
         obj.mex_ptr = constructPtrRigidBodyConstraintmex(RigidBodyConstraint.WorldGazeOrientConstraintType,robot.getMexModelPtr,body,axis,quat_des,conethreshold,threshold,tspan);
@@ -60,7 +51,7 @@ classdef WorldGazeOrientConstraint < GazeOrientConstraint
     
     function joint_idx = kinematicsPathJoints(obj)
       [~,joint_path] = obj.robot.findKinematicPath(1,obj.body);
-      joint_idx = vertcat(obj.robot.body(joint_path).dofnum)';
+      joint_idx = vertcat(obj.robot.body(joint_path).position_num)';
     end
   end
 end

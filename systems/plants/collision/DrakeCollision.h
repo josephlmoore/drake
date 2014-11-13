@@ -2,15 +2,29 @@
 #define __DrakeCollision_H__
 
 #include <memory>
+#include <set>
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 
 #include <stdexcept>
 #include <bitset>
 
+#include <stdint.h>
+
+#if defined(WIN32) || defined(WIN64)
+  #if defined(drakeCollision_EXPORTS)
+    #define DLLEXPORT __declspec( dllexport )
+  #else
+    #define DLLEXPORT __declspec( dllimport )
+  #endif
+#else
+    #define DLLEXPORT
+#endif
+
+
 namespace DrakeCollision
 {
-  enum Shape {
+  enum DLLEXPORT Shape {
     UNKNOWN,
     BOX,
     SPHERE,
@@ -19,20 +33,22 @@ namespace DrakeCollision
     CAPSULE
   };
 
-  enum ModelType {
+  enum DLLEXPORT ModelType {
     NONE,
     AUTO,
     BULLET
   };
 
-  class Model {
+  class DLLEXPORT Model {
   public:
     virtual void resize(int num_bodies) {};
     
     virtual void addElement(const int body_idx, const int parent_idx, 
 			    const Eigen::Matrix4d& T_element_to_link, Shape shape, 
-			    const std::vector<double>& params,
-			    bool is_static) {};
+			    const std::vector<double>& params, 
+          const std::string& group_name,
+			    bool is_static,
+          bool use_margins = true) {};
 
     virtual bool updateElementsForBody(const int body_idx, 
 				       const Eigen::Matrix4d& T_link_to_world) { return false; };
@@ -63,7 +79,28 @@ namespace DrakeCollision
 					Eigen::MatrixXd& ptsA, Eigen::MatrixXd& ptsB,
 					Eigen::MatrixXd& normal, 
 					Eigen::VectorXd& distance,
-					std::vector<int>& bodies_idx) { return false; };
+					const std::vector<int>& bodies_idx,
+          const std::set<std::string>& active_element_groups) { return false; };
+
+    bool closestPointsAllBodies(std::vector<int>& bodyA_idx, 
+        std::vector<int>& bodyB_idx, 
+        Eigen::MatrixXd& ptsA, Eigen::MatrixXd& ptsB,
+        Eigen::MatrixXd& normal, 
+        Eigen::VectorXd& distance,
+        const std::set<std::string>& active_element_groups);
+
+    bool closestPointsAllBodies(std::vector<int>& bodyA_idx, 
+        std::vector<int>& bodyB_idx, 
+        Eigen::MatrixXd& ptsA, Eigen::MatrixXd& ptsB,
+        Eigen::MatrixXd& normal, 
+        Eigen::VectorXd& distance,
+        const std::vector<int>& bodies_idx);
+
+    bool closestPointsAllBodies(std::vector<int>& bodyA_idx, 
+        std::vector<int>& bodyB_idx, 
+        Eigen::MatrixXd& ptsA, Eigen::MatrixXd& ptsB,
+        Eigen::MatrixXd& normal, 
+        Eigen::VectorXd& distance);
 
     virtual bool allCollisions(std::vector<int>& bodyA_idx, 
 			       std::vector<int>& bodyB_idx, 
@@ -77,25 +114,29 @@ namespace DrakeCollision
     // @param distance to the first collision, or -1 on no collision
     //
     virtual bool collisionRaycast(const Eigen::Matrix3Xd &origin, const Eigen::Matrix3Xd &ray_endpoint, Eigen::VectorXd &distances) { return false; };
+
+    protected:
+      virtual const std::vector<int> bodyIndices() const;
+      virtual const std::set<std::string> elementGroupNames() const;
   };
 
-  std::shared_ptr<Model> newModel();
+  DLLEXPORT std::shared_ptr<Model> newModel();
 
-  std::shared_ptr<Model> newModel(ModelType model_type);
+  DLLEXPORT std::shared_ptr<Model> newModel(ModelType model_type);
 
 
   
   typedef std::bitset<16> bitmask;
   // Constants
-  extern const bitmask ALL_MASK;
-  extern const bitmask NONE_MASK;
-  extern const bitmask DEFAULT_GROUP;
+  extern const DLLEXPORT bitmask ALL_MASK;
+  extern const DLLEXPORT bitmask NONE_MASK;
+  extern const DLLEXPORT bitmask DEFAULT_GROUP;
 
   // Exceptions
 
-  class noClosestPointsResultException : public std::exception {};
+  class DLLEXPORT noClosestPointsResultException : public std::exception {};
 
-  class badShapeException : public std::exception
+  class DLLEXPORT badShapeException : public std::exception
   {
     public:
       badShapeException();
@@ -106,14 +147,14 @@ namespace DrakeCollision
       std::string shape_str;
   };
 
-  class zeroRadiusSphereException : public badShapeException
+  class DLLEXPORT zeroRadiusSphereException : public badShapeException
   {
     public:
       virtual const char* what() const throw();
       virtual ~zeroRadiusSphereException() throw() {};
   };
 
-  class unknownShapeException : public badShapeException
+  class DLLEXPORT unknownShapeException : public badShapeException
   {
     public:
       unknownShapeException(Shape shape) : badShapeException(shape){};
@@ -121,7 +162,7 @@ namespace DrakeCollision
       virtual ~unknownShapeException() throw() {};
   };
 
-  class unsupportedShapeException : public badShapeException
+  class DLLEXPORT unsupportedShapeException : public badShapeException
   {
     public:
       unsupportedShapeException(Shape shape) : badShapeException(shape){};

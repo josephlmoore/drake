@@ -24,17 +24,23 @@ warning(w);
 % the kinematics and dynamics should actually match, when the order of the indices is
 % flopped
 
-nq=getNumDOF(m_rpy);
+nq=getNumPositions(m_rpy);
 ind = [1;2;3;6;5;4;(7:nq)'];
 xind = [ind;nq+ind];
 
-x0 = resolveConstraints(m_rpy,Point(getStateFrame(m_rpy)));
-x02 = resolveConstraints(m_ypr_rel,Point(getStateFrame(m_ypr_rel)));
+x02 = .001*randn(getNumStates(m_rpy),1);
+x0 = resolveConstraints(m_rpy,x02(xind));
+x02 = resolveConstraints(m_ypr_rel,x02);
 valuecheck(x0,x02(xind),1e-4);
 
 w = warning('off','Drake:RigidBodyManipulator:collisionDetect:doKinematicsMex');
 for i=1:100
-  q = .1*randn(nq,1); qd = randn(nq,1); u = randn(getNumInputs(m_rpy),1);
+  q = [];
+  while isempty(q) || abs(abs(q(5)) - pi / 2) < 0.15 % avoid singularity
+    q = randn(nq,1);
+  end
+  
+  qd = rand(nq,1)-.5; u = rand(getNumInputs(m_rpy),1)-.5;
 
   kinsol = doKinematics(m_rpy,q,true,false,qd);
   [pt,J,Jdot] = terrainContactPositions(m_rpy,kinsol,true);

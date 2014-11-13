@@ -22,7 +22,7 @@ classdef GliderPlant < DrakeSystem
     I = 0.0015;
     m = 0.08;
     g = 9.81; % m/s^2
-    rho = 1.292; % kg/m^3
+    rho = 1.204; % kg/m^3
     xd = [0,0,pi/4,0,0,0,0]';% the goal
     phi_lo_limit = -0.9473; % lower elevator angle limit
     phi_up_limit = 0.4463; % upper elevator angle limit
@@ -31,7 +31,7 @@ classdef GliderPlant < DrakeSystem
   
   methods
     function obj = GliderPlant()
-      obj = obj@DrakeSystem(7,0,1,7);
+      obj = obj@DrakeSystem(7,0,1,7,false,true);
       obj = setDirectFeedthrough(obj,0);
       ulimit = 13; % max servo velocity
       obj = setInputLimits(obj,-ulimit,ulimit);
@@ -76,7 +76,7 @@ classdef GliderPlant < DrakeSystem
       % phi_lo_limit < x(4) < phi_up_limit
       
       if (nargout>1)
-        [df]= dynamicsGradients(obj,t,x,u);
+        [df]= dynamicsGradients(obj,t,x,u,nargout-1);
       end
     end
     

@@ -11,6 +11,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+#include "joints/drakeJointUtil.h"
 
 using namespace std;
 
@@ -177,9 +178,9 @@ URDFRigidBodyManipulator::URDFRigidBodyManipulator(void)
 : 
   RigidBodyManipulator(0,0,1)
 {
-	bodies[0].linkname = "world";
-	bodies[0].parent = -1;
-        bodies[0].robotnum = 0;
+	bodies[0]->linkname = "world";
+	bodies[0]->parent = -1;
+        bodies[0]->robotnum = 0;
 }
 
 void setJointLimits(boost::shared_ptr<urdf::ModelInterface> urdf_model, boost::shared_ptr<urdf::Joint> j, const map<string, int> &dofname_to_dofnum, VectorXd& joint_limit_min, VectorXd& joint_limit_max);
@@ -208,6 +209,7 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
   joint_map.push_back(jointname_to_jointnum);
   dof_map.push_back(dofname_to_dofnum);
   urdf_model.push_back(_urdf_model);
+  bool print_mesh_package_warning(true);
   
   int robotnum = static_cast<int>(this->robot_name.size())-1;
   for (map<string, boost::shared_ptr<urdf::Link> >::iterator l=_urdf_model->links_.begin(); l!=_urdf_model->links_.end(); l++) {
@@ -221,19 +223,19 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
       if (dn == dofname_to_dofnum.end()) ROS_ERROR("can't find joint %s.  this shouldn't happen", j->name.c_str());
       _dofnum = dn->second;
 
-    	bodies[index].linkname = l->first;
-    	bodies[index].jointname = j->name;
+    	bodies[index]->linkname = l->first;
+    	bodies[index]->jointname = j->name;
         if(l->second->inertial == nullptr)
         {
-          bodies[index].mass = 0.0;
+          bodies[index]->mass = 0.0;
         }
         else
         {
-          bodies[index].mass = l->second->inertial->mass;
+          bodies[index]->mass = l->second->inertial->mass;
         }
-//    	cout << "body[" << index << "] linkname: " << bodies[index].linkname << ", jointname: " << bodies[index].jointname << endl;
+//    	cout << "body[" << index << "] linkname: " << bodies[index]->linkname << ", jointname: " << bodies[index]->jointname << endl;
 
-        bodies[index].robotnum = robotnum;
+        bodies[index]->robotnum = robotnum;
 
     	{ // set up parent
     		map<string, boost::shared_ptr<urdf::Link> >::iterator pl=_urdf_model->links_.find(j->parent_link_name);
@@ -244,36 +246,36 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
     			map<string, int>::iterator pjn=jointname_to_jointnum.find(pj->name);
     			if (pjn == jointname_to_jointnum.end()) ROS_ERROR("can't find joint %s.  this shouldn't happen", pj->name.c_str());
 
-    			bodies[index].parent = pjn->second;
+    			bodies[index]->parent = pjn->second;
     			parent[index-1] = pjn->second-1;
     		} else { // the parent body is the floating base
             	string jointname="base";
                 map<string, int>::iterator jn=jointname_to_jointnum.find(jointname);
                 if (jn == jointname_to_jointnum.end()) ROS_ERROR("can't find joint %s.  this shouldn't happen",jointname.c_str());
-                bodies[index].parent = jn->second;
+                bodies[index]->parent = jn->second;
     		}
     	}
 
-    	bodies[index].dofnum = _dofnum;
+    	bodies[index]->dofnum = _dofnum;
     	dofnum[index-1] = _dofnum;
 
     	// set pitch and floating
     	switch (j->type) {
     	case urdf::Joint::PRISMATIC:
     		pitch[index-1] = INF;
-    		bodies[index].pitch = INF;
-    		bodies[index].floating=0;
+    		bodies[index]->pitch = INF;
+    		bodies[index]->floating=0;
     		break;
       default:  // continuous, rotary, fixed, ...
       	pitch[index-1] = 0.0;
-      	bodies[index].pitch = 0.0;
-      	bodies[index].floating=0;
+      	bodies[index]->pitch = 0.0;
+      	bodies[index]->floating=0;
       	break;
       }
 
       // setup kinematic tree
       {
-      	poseToTransform(j->parent_to_joint_origin_transform,bodies[index].Ttree);
+      	poseToTransform(j->parent_to_joint_origin_transform,bodies[index]->Ttree);
 
         Vector3d zvec; zvec << 0,0,1;
         Vector3d joint_axis; joint_axis << j->axis.x, j->axis.y, j->axis.z;
@@ -288,11 +290,22 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
         qy=axis(1)*sin(angle/2.0);
         qz=axis(2)*sin(angle/2.0);
 
-        bodies[index].T_body_to_joint <<
+        bodies[index]->T_body_to_joint <<
                 qw*qw + qx*qx - qy*qy - qz*qz, 2*qx*qy - 2*qw*qz, 2*qx*qz + 2*qw*qy, 0,
                 2*qx*qy + 2*qw*qz,  qw*qw + qy*qy - qx*qx - qz*qz, 2*qy*qz - 2*qw*qx, 0,
                 2*qx*qz - 2*qw*qy, 2*qy*qz + 2*qw*qx, qw*qw + qz*qz - qx*qx - qy*qy, 0,
                 0, 0, 0, 1;
+      }
+      {
+        // set DrakeJoint
+        // FIXME creating joint based on bodies[index]->floating and bodies[index]->pitch to match the switch (j->type) above.
+        // This switch doesn't handle floating joints however...
+        // Best not to change functionality at this point.
+        Vector3d joint_axis;
+        joint_axis << j->axis.x, j->axis.y, j->axis.z;
+        Isometry3d transform_to_parent_body;
+        poseToTransform(j->parent_to_joint_origin_transform,transform_to_parent_body.matrix());
+        bodies[index]->setJoint(createJoint(j->name, transform_to_parent_body, bodies[index]->floating, joint_axis, bodies[index]->pitch));
       }
 
     } else { // no joint, this link is attached directly to the floating base
@@ -312,18 +325,18 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
       _dofnum = dn->second;
 
     	// set up RigidBody (kinematics)
-    	bodies[index].linkname = l->first;
-    	bodies[index].jointname = jointname;
-        bodies[index].robotnum = robotnum;
+    	bodies[index]->linkname = l->first;
+    	bodies[index]->jointname = jointname;
+        bodies[index]->robotnum = robotnum;
 
-//    	cout << "body[" << index << "] linkname: " << bodies[index].linkname << ", jointname: " << bodies[index].jointname << endl;
+//    	cout << "body[" << index << "] linkname: " << bodies[index]->linkname << ", jointname: " << bodies[index]->jointname << endl;
 
-    	bodies[index].parent = 0;
-    	bodies[index].dofnum = _dofnum;
-      bodies[index].floating = 1;
+    	bodies[index]->parent = 0;
+    	bodies[index]->dofnum = _dofnum;
+      bodies[index]->floating = 1;
       // pitch is irrelevant
-      bodies[index].Ttree = Matrix4d::Identity();
-      bodies[index].T_body_to_joint = Matrix4d::Identity();
+      bodies[index]->Ttree = Matrix4d::Identity();
+      bodies[index]->T_body_to_joint = Matrix4d::Identity();
 
       // todo: set up featherstone structure (dynamics)
       parent[index-1] = -1;
@@ -339,6 +352,7 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
         vector<boost::shared_ptr<urdf::Collision> > *collisions = c_grp_it->second.get();
         for (vector<boost::shared_ptr<urdf::Collision> >::iterator citer = collisions->begin(); citer!=collisions->end(); citer++)
         {
+          bool create_collision_element(true);
           urdf::Collision * cptr = citer->get();
           if (!cptr) continue;
 
@@ -377,8 +391,21 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
           	{
               boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(cptr->geometry));
               boost::filesystem::path mesh_filename(root_dir);
-              mesh_filename /= mesh->filename;
-              readObjFile(mesh_filename,params);
+              boost::regex package(".*package://.*");
+              if (!boost::regex_match(mesh->filename, package)) {
+                mesh_filename /= mesh->filename;
+                readObjFile(mesh_filename,params);
+              } else {
+                create_collision_element = false;
+                if (print_mesh_package_warning) {
+                  cerr << "Warning: The robot '" << _urdf_model->getName()
+                       << "' contains collision geometries that specify mesh "
+                       << "files with the 'package://' syntax, which "
+                       << "URDFRigidBodyManipulator does not support. These "
+                       << "collision geometries will be ignored." << endl;
+                  print_mesh_package_warning = false;
+                }
+              }
               shape = DrakeCollision::Shape::MESH;
           	}
         		break;
@@ -386,10 +413,12 @@ bool URDFRigidBodyManipulator::addURDF(boost::shared_ptr<urdf::ModelInterface> _
         		cerr << "Link " << l->first << " has a collision element with an unknown type " << type << endl;
         		break;
           }
-          addCollisionElement(index,T,shape,params);
+          if (create_collision_element){
+            addCollisionElement(index,T,shape,params);
+          }
         }
       }
-      if (bodies[index].parent<0) {
+      if (bodies[index]->parent<0) {
         updateCollisionElements(index);  // update static objects only once - right here on load
       }
     }

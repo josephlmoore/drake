@@ -15,7 +15,7 @@ classdef WorldFixedOrientConstraint < MultipleTimeKinematicConstraint
   methods(Access = protected)
     function [c,dc_valid] = evalValidTime(obj,valid_kinsol_cell)
       num_valid_t = length(valid_kinsol_cell);
-      nq = obj.robot.getNumDOF();
+      nq = obj.robot.getNumPositions();
       quat = zeros(4,num_valid_t);
       if(nargout == 2)
         J = zeros(4*num_valid_t,nq);
@@ -69,15 +69,34 @@ classdef WorldFixedOrientConstraint < MultipleTimeKinematicConstraint
     end
     
     
-    function [lb,ub] = bounds(obj,t)
-      valid_t = t(obj.isTimeValid(t));
-      if(length(valid_t)>=2)
-        num_valid_t = length(valid_t);
-        lb = num_valid_t;
-        ub = num_valid_t;
+    function [lb,ub] = bounds(obj,t,N)
+      % [lb,ub] = bounds(obj,t) returns the upper and lower bounds for this
+      % constraint at all valid times given in t.
+      %
+      % [lb,ub] = bounds(obj,[],N) returns the upper and lower bounds for this
+      % constraint for N valid times
+      %
+      % @param obj  -- WorldFixedOrientationConstraint object
+      % @param t    -- Vector of times
+      % @param N    -- Integer number of time points
+      if isempty(t);
+        if(N>=2)
+          lb = [0;N];
+          ub = [0;N];
+        else
+          lb = [];
+          ub = [];
+        end
       else
-        lb = [];
-        ub = [];
+        valid_t = t(obj.isTimeValid(t));
+        if(length(valid_t)>=2)
+          num_valid_t = length(valid_t);
+          lb = num_valid_t;
+          ub = num_valid_t;
+        else
+          lb = [];
+          ub = [];
+        end
       end
     end
     
@@ -92,7 +111,7 @@ classdef WorldFixedOrientConstraint < MultipleTimeKinematicConstraint
     
     function joint_idx = kinematicPathJoints(obj)
       [~,joint_path] = obj.robot.findKinematicPath(1,obj.body);
-      joint_idx = vertcat(obj.robot.body(joint_path).dofnum)';
+      joint_idx = vertcat(obj.robot.body(joint_path).position_num)';
     end
   end
 end

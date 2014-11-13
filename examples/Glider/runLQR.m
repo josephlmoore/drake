@@ -3,16 +3,19 @@ function runLQR
 pd = GliderPlant;
 pv = GliderVisualizer(pd);
 
-%[utraj,xtraj]=runDircol(pd);
+% obtain nomial trajectories via dircol with end constraints
+try
+  trajs=load('glider_trajs.mat');
+
+  xtraj=trajs.xtraj;
+  utraj=trajs.utraj;
+
+  utraj = setOutputFrame(utraj,p.getInputFrame);
+  xtraj = setOutputFrame(xtraj,p.getStateFrame);
+catch
+  [utraj,xtraj]=runDircolPerching(pd);
+end
 pd = pd.setInputLimits(-inf,inf);
-
-trajs=load('glider_trajs.mat');
-
-xtraj=trajs.xtraj;
-utraj=trajs.utraj;
-
-utraj = setOutputFrame(utraj,pd.getInputFrame);
-xtraj = setOutputFrame(xtraj,pd.getStateFrame);
 
 
 figure()
@@ -27,7 +30,3 @@ for i=1:1
 end
 
 end
-
-
-
-

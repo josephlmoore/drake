@@ -52,13 +52,15 @@ namespace DrakeCollision
 
   void BulletModel::addElement(const int body_idx, const int parent_idx, 
                                 const Matrix4d& T_element_to_link, Shape shape, 
-                                const vector<double>& params, bool is_static)
+                                const vector<double>& params, 
+                                const string& group_name, bool is_static,
+                                bool use_margins)
   {
     //DEBUG
     //cout << "BulletModel::addElement: START" << endl;
     //END_DEBUG
     try {
-      bodies[body_idx].addElement(body_idx, parent_idx, T_element_to_link, shape, params );
+      bodies[body_idx].addElement(body_idx, parent_idx, T_element_to_link, shape, params, group_name, use_margins );
       
       const BulletElement& elem = bodies.at(body_idx).back();
       element_data.push_back(unique_ptr<ElementData>(new ElementData(body_idx,elem.getShape())));
@@ -113,6 +115,7 @@ namespace DrakeCollision
                                                  const int bodyB_idx,
                                                  const BulletElement& elemA, 
                                                  const BulletElement& elemB, 
+                                                 const set<string>& active_element_groups,
                                                  const ResultCollShPtr& c) 
   {
     //DEBUG
@@ -145,14 +148,14 @@ namespace DrakeCollision
     //END_DEBUG
     btVector3 pointOnAinWorld;
     btVector3 pointOnBinWorld;
-    if (elemA.getShape() == MESH) {
+    if (elemA.getShape() == MESH || elemA.getShape() == BOX) {
       pointOnAinWorld = gjkOutput.m_pointInWorld +
         gjkOutput.m_normalOnBInWorld*(gjkOutput.m_distance+shapeA->getMargin());
     } else {
       pointOnAinWorld = gjkOutput.m_pointInWorld +
         gjkOutput.m_normalOnBInWorld*gjkOutput.m_distance;
     }
-    if (elemB.getShape() == MESH) {
+    if (elemB.getShape() == MESH || elemB.getShape() == BOX) {
       pointOnBinWorld = gjkOutput.m_pointInWorld - gjkOutput.m_normalOnBInWorld*shapeB->getMargin();
     } else {
       pointOnBinWorld = gjkOutput.m_pointInWorld;
@@ -220,7 +223,7 @@ namespace DrakeCollision
     auto bt_c = static_pointer_cast<BulletResultCollector>(c);
     bt_c->setBodyIdx(bodyA_idx, bodyB_idx);
     bt_collision_world->contactPairTest(elemA.bt_obj.get(),elemB.bt_obj.get(),
-                                        *bt_c->getBtPtr());
+        *bt_c->getBtPtr());
 
     return (c->pts.size() > 0);
   }
@@ -309,8 +312,7 @@ namespace DrakeCollision
             Vector3d end_eigen(end.getX(), end.getY(), end.getZ());
             
             distances(i) = (end_eigen - origins.col(i)).norm();
-            
-            
+          
         } else {
             distances(i) = -1;
         }
@@ -327,7 +329,7 @@ namespace DrakeCollision
     //try {
     //END_DEBUG
     ResultCollShPtr c(new MinDistResultCollector());
-    findClosestPointsBtwBodies(bodyA_idx,bodyB_idx,c);
+    findClosestPointsBtwBodies(bodyA_idx,bodyB_idx,elementGroupNames(),c);
     c->pts.at(0).getResults(ptA, ptB, normal, distance);
     return (c->pts.size() > 0);
     //DEBUG
@@ -343,7 +345,8 @@ namespace DrakeCollision
           MatrixXd& ptsA, MatrixXd& ptsB,
           MatrixXd& normal,
           VectorXd& distance,
-          std::vector<int>& bodies_idx)
+          const std::vector<int>& bodies_idx,
+          const std::set<std::string>& active_element_groups)
   {
     bool has_result=false;
     //DEBUG
@@ -351,11 +354,6 @@ namespace DrakeCollision
     //END_DEBUG
     //ResultCollector c;
     ResultCollShPtr c = std::make_shared<ResultCollector>();
-    if (bodies_idx.size() == 0) {
-      for (auto it = bodies.begin(); it != bodies.end(); ++it) {
-        bodies_idx.push_back(it->first);
-      }
-    }
     //DEBUG
     //std::cout << "ModelTemplate::closestPointsAllBodies: " << std::endl;
     //std::cout << "Num active bodies: " << bodies_idx.size() << std::endl;
@@ -389,7 +387,7 @@ namespace DrakeCollision
               //std::cout << "ModelTemplate::closestPointsAllBodies: Body B: " << bodyB.getBodyIdx() << std::endl;
               //END_DEBUG
               has_result = findClosestPointsBtwBodies(bodyA.getBodyIdx(),
-                      bodyB.getBodyIdx(),
+                      bodyB.getBodyIdx(), active_element_groups,
                       c);
             }
           }
@@ -438,10 +436,10 @@ namespace DrakeCollision
       Shape shapeB = element_dataB->shape;
       double marginA = 0;
       double marginB = 0;
-      if (shapeA == MESH) { 
+      if (shapeA == MESH || shapeA == BOX) { 
         marginA = obA->getCollisionShape()->getMargin();
       }
-      if (shapeB == MESH) { 
+      if (shapeB == MESH || shapeB == BOX) { 
         marginB = obB->getCollisionShape()->getMargin();
       }
       int numContacts = contactManifold->getNumContacts();
@@ -459,5 +457,14 @@ namespace DrakeCollision
     }   
     c.getResults(bodyA_idx,bodyB_idx,ptsA,ptsB,normals,distance);
     return c.pts.size() > 0;
+  }
+
+  const vector<int> BulletModel::bodyIndices() const
+  {
+    std::vector<int> bodies_idx;
+    for (auto it = bodies.begin(); it != bodies.end(); ++it) {
+      bodies_idx.push_back(it->first);
+    }
+    return bodies_idx;
   }
 }

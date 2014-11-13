@@ -62,21 +62,20 @@ classdef Visualizer < DrakeSystem
       %   Animates the trajectory in quasi- correct time using a matlab timer
       %     optional controlobj will playback the corresponding control scopes
       %
-      %   @param xtraj trajectory to visualize
-      %   @param options visualizer configuration:
-      %                     slider: create playback slider to control time and speed
+      % @param xtraj trajectory to visualize
+      % @option slider set to true to create playback slider to control time and speed
+      % @option lcmlog plays back an lcmlog while calling the draw methods.
+      %                (useful for, e.g., lcmgl debugging)
 
       typecheck(xtraj,'Trajectory');
       if (xtraj.getOutputFrame()~=obj.getInputFrame)
         xtraj = xtraj.inFrame(obj.getInputFrame);  % try to convert it
       end
 
-      if nargin < 3
-        options = struct();
-      end
-      if ~isfield(options, 'slider')
-        options.slider = false;
-      end
+      if nargin < 3, options = struct(); end
+      defaultOptions.slider = false;
+      defaultOptions.lcmlog = [];
+      options = applyDefaults(options,defaultOptions);
 
       f = sfigure(89);
       set(f, 'Visible', 'off');
@@ -86,6 +85,7 @@ classdef Visualizer < DrakeSystem
       t0 = tspan(1);
       ts = getSampleTime(xtraj);
       time_steps = (tspan(end)-tspan(1))/max(obj.display_dt,eps);
+      last_display_time = tspan(1)-eps;
 
       speed_format = 'Speed = %.3g';
       time_format = 'Time = %.3g';
@@ -107,8 +107,8 @@ classdef Visualizer < DrakeSystem
       time_display = uicontrol('Style', 'text', 'Position', [10, 10, 120, 20],...
         'String', sprintf(time_format, tspan(1)));
 
-      % use a little undocumented matlab to get continuous slider feedback:
-      time_slider_listener = handle.listener(time_slider,'ActionEvent',@update_time_display);
+      % set up continuous slider feedback:
+      time_slider_listener = addlistener(time_slider,'ContinuousValueChange',@update_time_display);
 
       function update_speed(source, eventdata)
         obj.playback_speed = 10 ^ (get(speed_slider, 'Value'));
@@ -123,6 +123,15 @@ classdef Visualizer < DrakeSystem
         if (ts(1)>0) t = round((t-ts(2))/ts(1))*ts(1) + ts(2); end  % align with sample times if necessary
         set(time_display, 'String', sprintf(time_format, t));
         obj.drawWrapper(t, xtraj.eval(t));
+        if ~isempty(options.lcmlog)
+          % note: could make this faster by not checking the times which I
+          % know have passed
+          topublish = options.lcmlog([options.lcmlog.simtime]>last_display_time & [options.lcmlog.simtime]<=t);
+          if ~isempty(topublish)
+            publishLCMLog(topublish);
+          end
+        end
+        last_display_time = t;
       end
       function start_playback(source, eventdata)
         if ~ishandle(play_button)
@@ -187,52 +196,114 @@ classdef Visualizer < DrakeSystem
     end
 
     function inspector(obj,x0,state_dims,minrange,maxrange,visualized_system)
-      % set up a little gui with sliders to manually adjust each of the
-      % coordinates.
+      % brings up a simple slider gui that displays the robot
+      % in the specified state when possible.
+      %
+      % @param x0 the initial state to display the robot in
+      % @param state_dims are the indices of the states to show on the
+      % slider. Including velocity states will display the forces and torques.
+      % @param minrange is the lower bound for the sliders
+      % @param maxrange is the upper bound for the sliders
+      % @param visualized_system is the system to be displayed
+      %
+      % Example, for drawing forces on a 12-state floating base system:
+      %
+      % <pre>
+      %   v.inspector(zeros(12,1), 1:12)
+      % </pre>
 
       fr = obj.getInputFrame();
-      if (nargin<2), x0 = zeros(fr.dim,1); end
-      if (nargin<3), state_dims = (1:fr.dim)'; end
+      if (nargin<2 || isempty(x0)), x0 = zeros(fr.dim,1); end
+      if (nargin<3 || isempty(state_dims)), state_dims = (1:fr.dim)'; end
       if (nargin<4), minrange = repmat(-5,size(state_dims)); end
       if (nargin<5), maxrange = -minrange; end
-      if (nargin<6), model = []; end
+      if (nargin<6), visualized_system = []; end
 
       x0(state_dims) = max(min(x0(state_dims),maxrange),minrange);
-      if ~isempty(visualized_system), x0 = resolveConstraints(visualized_system,x0); end
-
-      obj.drawWrapper(0,x0);
+      if ~isempty(visualized_system),
+        bb_min = -inf(size(x0)); bb_min(state_dims) = minrange;
+        bb_max = inf(size(x0)); bb_max(state_dims) = maxrange;
+        bbcon = BoundingBoxConstraint(bb_min,bb_max);
+        [x0,~,prog] = resolveConstraints(visualized_system,x0,[],bbcon);
+      end
 
       rows = ceil(length(state_dims)/2);
       f = sfigure(99); clf;
-      set(f, 'Position', [560 400 560 20 + 30*rows]);
+      set(f,'ResizeFcn',@resize_gui);
 
-      y=30*rows-10;
-      for i=reshape(state_dims,1,[])
+      for i=1:numel(state_dims)
         label{i} = uicontrol('Style','text','String',getCoordinateName(fr,state_dims(i)), ...
-          'Position',[10+280*(i>rows), y+30*rows*(i>rows), 90, 20],'BackgroundColor',[.8 .8 .8]);
+          'HorizontalAlignment','right');
         slider{i} = uicontrol('Style', 'slider', 'Min', minrange(i), 'Max', maxrange(i), ...
-          'Value', x0(i), 'Position', [100+280*(i>rows), y+30*rows*(i>rows), 170, 20],...
-          'Callback',{@update_display});
+          'Value', x0(state_dims(i)), 'Callback',{@update_display},'UserData',state_dims(i));
+        value{i} = uicontrol('Style','text','String',num2str(x0(state_dims(i))), ...
+          'HorizontalAlignment','left');
 
         % use a little undocumented matlab to get continuous slider feedback:
-        slider_listener{i} = handle.listener(slider{i},'ActionEvent',@update_display);
-        y = y - 30;
+        slider_listener{i} = addlistener(slider{i},'ContinuousValueChange',@update_display);
+      end
+
+      set(f, 'Position', [560 400 560 20 + 30*rows]);
+      resize_gui();
+      update_display(slider{1});
+
+      function resize_gui(source, eventdata)
+        p = get(gcf,'Position');
+        width = p(3);
+        y=30*rows-10;
+        for i=1:numel(state_dims)
+          set(label{i},'Position',[20+width/2*(i>rows), y+30*rows*(i>rows), width/2-220, 20]);
+          set(slider{i},'Position', [width/2-190+width/2*(i>rows), y+30*rows*(i>rows), 140, 20]);
+          set(value{i},'Position', [width/2-45+width/2*(i>rows), y+30*rows*(i>rows), 45, 20]);
+          y = y - 30;
+        end
       end
 
       function update_display(source, eventdata)
+        if nargin>1 && isempty(eventdata), return; end  % was running twice for most events
+
         t = 0; x = x0;
-        for i=state_dims(:)'
+        for i=1:numel(state_dims)
           x(state_dims(i)) = get(slider{i}, 'Value');
+          set(value{i},'String',num2str(x(state_dims(i)),'%4.3f'));
         end
-        if (~isempty(visualized_system) && getNumStateConstraints(visualized_system)>0)
-          % todo: pass in additional constriants to keep it inside the
-          % slider values
-          x = resolveConstraints(visualized_system,x)
-          for i=state_dims(:)'
+
+        if (~isempty(visualized_system) && getNumStateConstraints(visualized_system)+getNumUnilateralConstraints(visualized_system)>0)
+          % constrain the current slider to be exactly the specified value
+          current_slider_statedim = get(source,'UserData');
+          this_prog = addConstraint(prog,ConstantConstraint(get(source,'Value')),current_slider_statedim);
+
+          % and add an objective to be as close as possible to the previous
+          % solution on the other sliders.
+          % objective = sum_over_remaining_state_dims .5*(x_i-x0_i)^2
+          remaining_state_dims = state_dims(state_dims~=current_slider_statedim);
+          if ~isempty(remaining_state_dims)
+            Q = eye(numel(remaining_state_dims));
+            b = -x0(remaining_state_dims);
+            objective = QuadraticConstraint(0,inf,Q,b);
+            this_prog = addCost(this_prog,objective,remaining_state_dims);
+          end
+          [x,objval,exitflag,infeasible_constraint_name] = solve(this_prog,x);
+          if ~isempty(infeasible_constraint_name)
+              infeasible_constraint_name
+          end
+%          .5*(x0(remaining_state_dims) - x(remaining_state_dims))^2
+%          fval = objective.eval(x(remaining_state_dims))
+          for i=1:numel(state_dims)
             set(slider{i},'Value',x(state_dims(i)));
           end
         end
+        x0 = x;
         obj.drawWrapper(t,x);
+
+        if (~isempty(visualized_system) && max(state_dims)>getNumPositions(visualized_system) && isa(obj,'RigidBodyVisualizer'))
+          % was asked to show velocties on a RigidBodyManipulator, draw forces and torques
+          q = x0(1:getNumPositions(visualized_system));
+          qd = x0(getNumPositions(visualized_system)+1:getNumPositions(visualized_system)+getNumVelocities(visualized_system));
+          visualized_system.drawLCMGLGravity(q,obj.gravity_visual_magnitude);
+          visualized_system.drawLCMGLForces(q,qd,obj.gravity_visual_magnitude);
+        end
+
       end
     end
 

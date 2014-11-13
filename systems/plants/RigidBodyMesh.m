@@ -34,7 +34,9 @@ classdef RigidBodyMesh < RigidBodyGeometry
       elseif strcmpi(ext,'.stl') || exist(fullfile(path,[name,'.stl']),'file')
         if ~strcmpi(ext,'.stl'), ext = '.stl'; end
         wrlfile = fullfile(tempdir,[name,'.wrl']);
-        stl2vrml(fullfile(path,[name,ext]),tempdir);
+        if ~exist(wrlfile,'file')
+          stl2vrml(fullfile(path,[name,ext]),tempdir);
+        end
       else
         error(['unknown mesh file extension ',obj.filename]);
       end
@@ -79,20 +81,20 @@ classdef RigidBodyMesh < RigidBodyGeometry
     end
 
     
-    function shape = serializeToLCM(obj)
-      shape = drake.lcmt_viewer_geometry_data();
-      shape.type = shape.MESH;
-      shape.string_data = obj.filename;
-      shape.num_float_data = 1;
-      shape.float_data = obj.scale;  % scale
+    function geometry = serializeToLCM(obj)
+      geometry = drake.lcmt_viewer_geometry_data();
+      geometry.type = geometry.MESH;
+      geometry.string_data = obj.filename;
+      geometry.num_float_data = 1;
+      geometry.float_data = obj.scale;  % scale
 
-      shape.position = obj.T(1:3,4);
-      shape.quaternion = rotmat2quat(obj.T(1:3,1:3));
-      shape.color = [obj.c(:);1.0];
+      geometry.position = obj.T(1:3,4);
+      geometry.quaternion = rotmat2quat(obj.T(1:3,1:3));
+      geometry.color = [obj.c(:);1.0];
     end
     
     function writeWRLShape(obj,fp,td)
-%      assert(all(obj.scale == 1)); % todo: handle this case
+      if isscalar(obj.scale) obj.scale = repmat(obj.scale,1,3); end
       assert(numel(obj.scale)==3);
       
       function tabprintf(fp,varargin), for i=1:td, fprintf(fp,'\t'); end, fprintf(fp,varargin{:}); end
@@ -140,7 +142,7 @@ classdef RigidBodyMesh < RigidBodyGeometry
   
   properties
     filename;
-    scale=1;
+    scale=[1 1 1];
   end
   
 end

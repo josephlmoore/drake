@@ -8,6 +8,11 @@ classdef RigidBodyWRLVisualizer < RigidBodyVisualizer
       checkDependency('vrml');
       typecheck(manip,'RigidBodyManipulator');
 
+      global g_disable_visualizers;
+      if g_disable_visualizers % evaluates to false if empty
+        error('Drake:MissingDependency:WRLVisualizerDisabled','visualizer is disabled with g_disable_visualizers');
+      end
+
       if ~usejava('awt') % usejava('awt') returns 0 if i'm running without a display
         error('Drake:MissingDependency:awt','VRML visualizer will not work without a display');
       end
@@ -37,25 +42,39 @@ classdef RigidBodyWRLVisualizer < RigidBodyVisualizer
       delete(obj.wrl);
     end
     
+    function viewpoint_struct = getViewpoint(obj)
+      fig = get(obj.wrl,'Figures'); 
+      viewpoint_struct.Viewpoint = get(fig,'Viewpoint');
+      viewpoint_struct.CameraDirection = get(fig,'CameraDirection');
+      viewpoint_struct.CameraPosition = get(fig,'CameraPosition');
+      viewpoint_struct.CameraUpVector = get(fig,'CameraUpVector');
+      viewpoint_struct.ZoomFactor = get(fig,'ZoomFactor');
+    end
+    
+    function setViewpoint(obj,viewpoint_struct)
+      fig = get(obj.wrl,'Figures'); 
+      set(fig,viewpoint_struct);
+    end
+        
     function drawWrapper(obj,t,x)
       draw(obj,t,x);
     end
     
-    function draw(obj,t,x)
+    function draw(obj,t,q)
       for i=1:length(obj.model.body)
         b = obj.model.body(i);
         if b.parent>0
           node=getfield(obj.wrl,b.jointname);
           if (b.floating==1)
-            node.rotation = rpy2axis(x(b.dofnum(4:6)))';
-            node.translation = x(b.dofnum(1:3))';
+            node.rotation = rpy2axis(q(b.position_num(4:6)))';
+            node.translation = q(b.position_num(1:3))';
           elseif (b.floating==2)
-            node.rotation = quat2axis(x(b.dofnum(4:7)))';
-            node.translation = x(b.dofnum(1:3))';
+            node.rotation = quat2axis(q(b.position_num(4:7)))';
+            node.translation = q(b.position_num(1:3))';
           elseif (b.pitch==0)
-            node.rotation=[b.joint_axis' x(b.dofnum)];
+            node.rotation=[b.joint_axis' q(b.position_num)];
           elseif isinf(b.pitch)
-            node.translation=x(b.dofnum)*b.joint_axis';
+            node.translation=q(b.position_num)*b.joint_axis';
           else
             error('helical joints not implemented yet (but would be simple)');
           end
@@ -66,7 +85,7 @@ classdef RigidBodyWRLVisualizer < RigidBodyVisualizer
       
       if (false)  % useful for graphically debugging kinematics
         figure(143); title('WRL kinematics debugger');
-        kinsol = doKinematics(obj.model,x(1:obj.model.getNumDOF),false,false);
+        kinsol = doKinematics(obj.model,x(1:obj.model.getNumPositions),false,false);
         pts = contactPositions(obj.model,kinsol);
         plot3(pts(1,:),pts(2,:),pts(3,:),'b*');
         xlabel('x'); ylabel('y'); zlabel('z');

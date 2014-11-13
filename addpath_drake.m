@@ -5,7 +5,7 @@ function addpath_drake
 % directing you to their location.
 %
 
-conf.root = pwd;
+root = pwd;
 
 if ~exist('pods_get_base_path','file')
   % search up to 4 directories up for a build/matlab directory
@@ -29,84 +29,54 @@ if verLessThan('matlab','7.6')
   % because I rely on the new matlab classes with classdef
 end
 
+% add package directories to the matlab path
+addpath(fullfile(root,'systems'));
+addpath(fullfile(root,'systems','plants'));
+addpath(fullfile(root,'systems','plants','collision'));
+addpath(fullfile(root,'systems','plants','constraint'));
+addpath(fullfile(root,'systems','controllers'));
+addpath(fullfile(root,'systems','observers'));
+addpath(fullfile(root,'systems','trajectories'));
+addpath(fullfile(root,'systems','frames'));
+addpath(fullfile(root,'systems','visualizers'));
+addpath(fullfile(root,'systems','robotInterfaces'));
+addpath(fullfile(root,'systems','robotInterfaces','calibration'));
+addpath(fullfile(root,'solvers'));
+addpath(fullfile(root,'solvers','trajectoryOptimization'));
+addpath(fullfile(root,'util'));
+addpath(fullfile(root,'thirdParty'));
+addpath(fullfile(root,'thirdParty','path'));
+addpath(fullfile(root,'thirdParty','spatial'));
+addpath(fullfile(root,'thirdParty','cprintf'));
+addpath(fullfile(root,'thirdParty','GetFullPath'));
+
+javaaddpath(fullfile(pods_get_base_path,'share','java','drake.jar'));
+
+if ispc 
+  setenv('PATH',[getenv('PATH'),';',GetFullPath(pods_get_lib_path),';',fullfile(root,'pod-build','lib','Release'),';',fullfile(root,'pod-build','lib')]);
+end
+
+
+clear util/checkDependency;  % makes sure that the persistent variable in the dependency checker gets cleared
+clear util/getDrakePath;
+
+% set up PATH LCP license
+% NOTE: This license was granted exclusively for the use of PATH from the Drake matlab package.
+% Any other use will be considered a violation of the license.  You can obtain a free license
+% from here: http://pages.cs.wisc.edu/~ferris/path.html
+setenv('PATH_LICENSE_STRING', '2096056969&Russ_Tedrake&Massachusetts_Institute_of_Technology&&USR&75042&18_4_2014&1000&PATH&GEN&0_0_0&0_0_0&5000&0_0');
+
 % turn off autosave for simulink models (seems evil, but generating
 % boatloads of autosaves is clearly worse)
-if (com.mathworks.services.Prefs.getBooleanPref('SaveOnModelUpdate'))
-  a = input('You currently have autosave enabled for simulink blocks.\nThis is fine, but will generate a lot of *.mdl.autosave files\nin your directory.  If you aren''t a regular Simulink user,\nthen I can disable that feature now.\n  Disable Simulink Autosave (y/n)? ', 's');
-  if (lower(a(1))=='y')
-    com.mathworks.services.Prefs.setBooleanPref('SaveOnModelUpdate',false);
+if checkDependency('simulink')
+  autosave_options = get_param(0,'AutoSaveOptions');
+  if autosave_options.SaveOnModelUpdate
+    warning('Drake:DisablingSimulinkAutosave','Disabling autosave for simulink blocks (to avoid generating a lot of *.mdl.autosave files in your directory.  If you aren''t a regular Simulink user and don''t want this disabled, comment out this section in addpath_drake.\nTo disable this warning in the future, add\n   warning(''off'',''Drake:DisablingSimulinkAutosave'')\nto your matlab startup.m');
+    autosave_options.SaveOnModelUpdate = false;
+    set_param(0,'AutoSaveOptions',autosave_options);
   end
 end
 % todo: try setting this before simulating, then resetting it after the
 % simulate?
-
-% add package directories to the matlab path
-addpath(fullfile(conf.root,'systems'));
-addpath(fullfile(conf.root,'systems','plants'));
-addpath(fullfile(conf.root,'systems','plants','affordance'));
-addpath(fullfile(conf.root,'systems','plants','collision'));
-addpath(fullfile(conf.root,'systems','plants','constraint'));
-addpath(fullfile(conf.root,'systems','controllers'));
-addpath(fullfile(conf.root,'systems','observers'));
-addpath(fullfile(conf.root,'systems','trajectories'));
-addpath(fullfile(conf.root,'systems','frames'));
-addpath(fullfile(conf.root,'systems','visualizers'));
-addpath(fullfile(conf.root,'systems','robotInterfaces'));
-addpath(fullfile(conf.root,'solvers'));
-addpath(fullfile(conf.root,'solvers','trajectoryOptimization'));
-addpath(fullfile(conf.root,'util'));
-addpath(fullfile(conf.root,'util','obstacles'));
-addpath(fullfile(conf.root,'thirdParty'));
-addpath(fullfile(conf.root,'thirdParty','path'));
-addpath(fullfile(conf.root,'thirdParty','spatial'));
-addpath(fullfile(conf.root,'thirdParty','cprintf'));
-addpath(fullfile(conf.root,'thirdParty','GetFullPath'));
-
-javaaddpath(fullfile(pods_get_base_path,'share','java','drake.jar'));
-
-% check for all dependencies
-
-v=ver('simulink');
-if (isempty(v))
-  conf.simulink_enabled = false;
-elseif verLessThan('simulink','7.3')
-  warning('Drake:SimulinkVersion','Most features of Drake reguires SIMULINK version 7.3 or above.');
-  % haven't actually tested with lower versions
-  conf.simulink_enabled = false;
-else
-  conf.simulink_enabled = true;
-end
-
-setenv('PATH_LICENSE_STRING', '1926793586&Courtesy&&&USR&54782&7_1_2014&1000&PATH&GEN&31_12_2015&0_0_0&5000&0_0');
-
-try
-  x = pathlcp(speye(500),-ones(500,1));
-  valuecheck(x,ones(500,1));
-  conf.pathlcp_enabled = true;
-catch
-  disp('The cached PATH license is out of date, and PATH will fail to solve larger problems. Please report this bug.');
-  conf.pathlcp_enabled = false;
-end
-
-%conf.pathlcp_enabled = ~isempty(getenv('PATH_LICENSE_STRING'));
-%if (~conf.pathlcp_enabled)
-%  disp(' ');
-%  disp(' The PATH LCP solver (in the thirdparty directory) needs you to get the setup the license: http://pages.cs.wisc.edu/~ferris/path.html');
-%  disp(' I recommend adding a setenv(''PATH_LICENSE_STRING'',...) line to your startup.m');
-%  disp(' The LCP solver will be disabled');
-%  disp(' ');
-%end
-
-% save configuration options to config.mat
-%conf
-save([conf.root,'/util/drake_config.mat'],'conf');
-
-%disp('To manually change any of these entries, use:')
-%disp('  editDrakeConfig(param,value);');
-
-clear util/checkDependency;  % makes sure that the persistent variable in the dependency checker gets cleared
-
-checkDependency('spotless'); % require spotless
-tf = checkDependency('lcm'); % optional dependency on lcm, but load it now
 
 end

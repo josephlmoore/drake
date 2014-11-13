@@ -28,21 +28,15 @@ classdef WorldGazeDirConstraint < GazeDirConstraint
       if(nargin == 5)
         tspan = [-inf inf];
       end
-      ptr = constructPtrRigidBodyConstraintmex(RigidBodyConstraint.WorldGazeDirConstraintType,robot.getMexModelPtr,body,axis,dir,conethreshold,tspan);
+      
       obj = obj@GazeDirConstraint(robot,axis,dir,conethreshold,tspan);
-      if(isnumeric(body))
-        sizecheck(body,[1,1]);
-        obj.body = body;
-      elseif(typecheck(body,'char'))
-        obj.body = robot.findLinkInd(body);
-      elseif(typecheck(body,'RigidBody'))
-        obj.body = robot.findLinkInd(body.linkname);
-      else
-        error('Drake:WorldPositionConstraint:Body must be either the link name or the link index');
-      end
-      obj.body_name = obj.robot.getBody(obj.body).linkname;
+      obj.body = obj.robot.parseBodyOrFrameID(body);
+      obj.body_name = obj.robot.getBodyOrFrameName(obj.body);
       obj.type = RigidBodyConstraint.WorldGazeDirConstraintType;
-      obj.mex_ptr = ptr;
+      if(robot.getMexModelPtr~=0 && exist('constructPtrRigidBodyConstraintmex','file'))
+        ptr = constructPtrRigidBodyConstraintmex(RigidBodyConstraint.WorldGazeDirConstraintType,robot.getMexModelPtr,body,axis,dir,conethreshold,tspan);
+        obj.mex_ptr = ptr;
+      end
     end
     
     function name_str = name(obj,t)
@@ -55,7 +49,7 @@ classdef WorldGazeDirConstraint < GazeDirConstraint
     
     function joint_idx = kinematicsPathJoints(obj)
       [~,joint_path] = obj.robot.findKinematicPath(1,obj.body);
-      joint_idx = vertcat(obj.robot.body(joint_path).dofnum)';
+      joint_idx = vertcat(obj.robot.body(joint_path).position_num)';
     end
   end
 end

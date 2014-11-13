@@ -12,8 +12,16 @@ if (mn ~= m*n) error('dimension mismatch'); end
 if (np ~= n*p) error('dimension mismatch'); end
 if (q2 ~= q) error('dA and dB must have the same number of gradient terms'); end
 
-Bcell = repmat({B},q,1);
-dAB = reshape(reshape(dA,m,n*q)*blkdiag(Bcell{:}) + A*reshape(dB,n,p*q),m*p,q);
+% speye is faster, so if we have numerical inputs we should use that. We
+% can't use speye with TaylorVars, however, because they don't implement
+% "find". We're switching based on `isnumeric` rather than
+% `isa(...,'TaylorVar') to avoid doing a string comparision.
+if isnumeric(B)
+  B_diag = kron(speye(q),B);
+else
+  B_diag = kron(eye(q),B);
+end
+dAB = reshape(reshape(dA,m,n*q)*B_diag + A*reshape(dB,n,p*q),m*p,q);
 
 
 % an alternative for the second half is what i did in the contact code:

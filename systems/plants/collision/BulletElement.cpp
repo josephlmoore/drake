@@ -9,23 +9,41 @@ using namespace Eigen;
 namespace DrakeCollision
 {
   BulletElement::BulletElement(const Matrix4d& T_elem_to_link, Shape shape, 
-                                const vector<double>& params)
+                                const vector<double>& params,
+                                const string& group_name,
+                                bool use_margins)
     : T_elem_to_link(T_elem_to_link),shape(shape)
   {
+    setGroupName(group_name);
     //DEBUG
     //std::cout << "BulletElement::BulletElement: START" << std::endl;
     //END_DEBUG
     btCollisionShape* bt_shape;
     switch (shape) {
       case BOX:
+        {
         //DEBUG
         //std::cout << "BulletElement::BulletElement: Create BOX ..." << std::endl;
         //END_DEBUG
-        bt_shape = new btBoxShape( btVector3(params[0]/2,params[1]/2,params[2]/2) );
-        bt_shape->setMargin(0.0);
+        btBoxShape bt_box( btVector3(params[0]/2,params[1]/2,params[2]/2) );
+        /* Strange things happen to the collision-normals when we use the
+         * convex interface to the btBoxShape. Instead, we'll explicitly create
+         * a btConvexHullShape.
+         */
+        bt_shape = new btConvexHullShape();
+        if (use_margins)
+          bt_shape->setMargin(0.05);
+        else
+          bt_shape->setMargin(0.0);
+        for (int i=0; i<8; ++i){
+          btVector3 vtx;
+          bt_box.getVertex(i,vtx);
+          dynamic_cast<btConvexHullShape*>(bt_shape)->addPoint(vtx);
+        }
         //DEBUG
         //std::cout << "BulletElement::BulletElement: Created BOX" << std::endl;
         //END_DEBUG
+        }
         break;
       case SPHERE:
         if (true || params[0] != 0) {
@@ -60,7 +78,10 @@ namespace DrakeCollision
                                           //params.size()/3,
                                           //(int) 3*sizeof(double) );
         bt_shape = new btConvexHullShape();
-        bt_shape->setMargin(0.05);
+        if (use_margins)
+          bt_shape->setMargin(0.05);
+        else
+          bt_shape->setMargin(0.0);
         for (int i=0; i<params.size(); i+=3){
           //DEBUG
           //std::cout << "BulletElement::BulletElement: Adding point " << i/3 + 1 << std::endl;
@@ -138,5 +159,15 @@ namespace DrakeCollision
     btT.setOrigin(pos);
 
     bt_obj->setWorldTransform(btT);
+  }
+
+  const string& BulletElement::getGroupName() const
+  {
+    return group_name;
+  }
+
+  void BulletElement::setGroupName(const string& group_name)
+  {
+    this->group_name = group_name;
   }
 }

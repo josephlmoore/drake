@@ -18,14 +18,14 @@ for i = 1 : nBodies
   else
     body = obj.body(i);
     
-    qBody = q(body.dofnum);
-    vBody = v(body.dofnum);
-    vdBody = vd(body.dofnum);
+    qBody = q(body.position_num);
+    vBody = v(body.velocity_num);
+    vdBody = vd(body.velocity_num);
     
     predecessor = body.parent;
     
     predecessorAccel = transformSpatialAcceleration(ret{predecessor}, transforms, twists, world, predecessor, predecessor, i);
-    jointAccel = motionSubspace(body, qBody) * vdBody + motionSubspaceDotV(body, qBody, vBody);
+    jointAccel = motionSubspace(body, qBody) * vdBody + motionSubspaceDotTimesV(body, qBody, vBody);
     ret{i} = predecessorAccel + jointAccel;
   end
 end

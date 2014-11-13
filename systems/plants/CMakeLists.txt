@@ -1,5 +1,5 @@
 
-# IMPORTANT NOTE!! 
+# IMPORTANT NOTE!!
 # matlab has it's own boost libraries.  DO NOT let any mex file depend
 # on the system boost (directly nor indirectly), or you're asking for trouble.
 find_package( Boost COMPONENTS filesystem system regex)
@@ -14,19 +14,26 @@ endif()
 
 if (eigen3_FOUND)
   # todo: check eigen version.  3.1.0 didn't work for clang.  3.2.0 did.
-
-  add_library(drakeRBM SHARED RigidBodyManipulator.cpp RigidBody.cpp)
+ add_library(drakeRBM SHARED RigidBodyManipulator.cpp RigidBody.cpp)
  target_link_libraries(drakeRBM drakeCollision)
+if (NOT WIN32) 
+ include_directories( joints )
+ target_link_libraries(drakeRBM drakeJoints)
+endif(NOT WIN32)
 
   pods_install_libraries(drakeRBM)
-  pods_install_headers(RigidBodyManipulator.h RigidBody.h RigidBodyFrame.h DESTINATION drake)
+  pods_install_headers(RigidBodyManipulator.h RigidBody.h RigidBodyFrame.h KinematicPath.h DESTINATION drake)
   pods_install_pkg_config_file(drake-rbm
     LIBS -ldrakeRBM
-    REQUIRES  
+    REQUIRES
     VERSION 0.0.1)
 
   add_subdirectory(collision)
   add_subdirectory(constraint)
+
+if (NOT WIN32)
+  add_subdirectory(joints)
+endif(NOT WIN32)
 
   if (Boost_FOUND)
     add_library(drakeRBMurdf URDFRigidBodyManipulator.cpp)
@@ -48,7 +55,6 @@ if (eigen3_FOUND)
   endmacro()
 
   add_rbm_mex(constructModelmex)
-  add_rbm_mex(deleteModelmex)
   add_rbm_mex(HandCmex)
   add_rbm_mex(doKinematicsmex)
   add_rbm_mex(forwardKinmex)
@@ -57,6 +63,8 @@ if (eigen3_FOUND)
   add_rbm_mex(collisionRaycastmex)
   add_rbm_mex(allCollisionsmex)
   add_rbm_mex(getCMMmex)
+  add_rbm_mex(findKinematicPathmex)
+  add_rbm_mex(geometricJacobianmex)
 
   add_library(drakeIKoptions SHARED IKoptions.cpp)
   target_link_libraries(drakeIKoptions drakeRBM drakeUtil)
@@ -64,9 +72,7 @@ if (eigen3_FOUND)
     add_mex(${ARGV} ${ARGV}.cpp)
     target_link_libraries(${ARGV} drakeRBM drakeUtil drakeIKoptions)
   endmacro()
-  add_ikoptions_mex(constructPtrIKoptionsmex)
-  add_ikoptions_mex(deletePtrIKoptionsmex)
-  add_ikoptions_mex(updatePtrIKoptionsmex)
+  add_ikoptions_mex(IKoptionsmex)
   add_ikoptions_mex(testIKoptionsmex)
 
   pods_find_pkg_config(gurobi)
@@ -115,4 +121,3 @@ if (eigen3_FOUND)
   add_subdirectory(test)
 
 endif(eigen3_FOUND)
-
